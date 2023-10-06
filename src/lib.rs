@@ -17,6 +17,7 @@ use tracing_subscriber::registry::Scope;
 use tracing_subscriber::Layer;
 
 mod textwrap;
+pub use textwrap::options as textwrap_options;
 
 mod fields;
 use fields::HumanFields;
