@@ -13,6 +13,20 @@ fn main() {
 }
 
 fn emit_events() {
+    tracing::trace!("Trace event.");
+    tracing::debug!("Debug event.");
+    tracing::info!(field = "field-value", "Info event.");
+    tracing::warn!("Warn event.");
+    tracing::error!("Error event.");
+
+    tracing::info!("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.");
+
+    tracing::info!(
+        field = "field-value",
+        other_field = "my-other-field-value",
+        "Info event."
+    );
+
     let span = tracing::info_span!("my-span", path = "my/cool/path.txt");
     let _guard = span.enter();
 
