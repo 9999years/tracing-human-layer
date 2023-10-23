@@ -14,9 +14,9 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::registry::Scope;
 use tracing_subscriber::Layer;
 
-use crate::Style;
 use crate::HumanEvent;
 use crate::HumanFields;
+use crate::Style;
 use crate::StyledSpanFields;
 
 #[derive(Debug)]
@@ -49,6 +49,11 @@ impl HumanLayer {
         self
     }
 
+    fn update_long(&self, last_event_was_long: AtomicBool) {
+        self.last_event_was_long
+            .store(last_event_was_long.load(Ordering::SeqCst), Ordering::SeqCst);
+    }
+
     fn event<S>(&self, level: Level, scope: Option<Scope<'_, S>>) -> HumanEvent
     where
         S: tracing::Subscriber,
@@ -61,9 +66,17 @@ impl HumanLayer {
         )
     }
 
-    fn update_long(&self, last_event_was_long: AtomicBool) {
-        self.last_event_was_long
-            .store(last_event_was_long.load(Ordering::SeqCst), Ordering::SeqCst);
+    fn event_for_id<S>(&self, id: &Id, ctx: Context<'_, S>) -> HumanEvent
+    where
+        S: tracing::Subscriber,
+        S: for<'lookup> LookupSpan<'lookup>,
+    {
+        self.event(
+            *ctx.metadata(id)
+                .expect("Metadata should exist for the span ID")
+                .level(),
+            ctx.span_scope(id),
+        )
     }
 }
 
@@ -121,12 +134,7 @@ where
 
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
         if self.span_events.clone() & FmtSpan::ENTER != FmtSpan::NONE {
-            let mut human_event = self.event(
-                *ctx.metadata(id)
-                    .expect("Metadata should exist for the span ID")
-                    .level(),
-                ctx.span_scope(id),
-            );
+            let mut human_event = self.event_for_id(id, ctx);
             human_event.fields.message = Some("enter".into());
             print!("{human_event}");
             self.update_long(human_event.last_event_was_long);
@@ -135,12 +143,7 @@ where
 
     fn on_exit(&self, id: &Id, ctx: Context<'_, S>) {
         if self.span_events.clone() & FmtSpan::EXIT != FmtSpan::NONE {
-            let mut human_event = self.event(
-                *ctx.metadata(id)
-                    .expect("Metadata should exist for the span ID")
-                    .level(),
-                ctx.span_scope(id),
-            );
+            let mut human_event = self.event_for_id(id, ctx);
             human_event.fields.message = Some("exit".into());
             print!("{human_event}");
             self.update_long(human_event.last_event_was_long);
@@ -149,12 +152,7 @@ where
 
     fn on_close(&self, id: Id, ctx: Context<'_, S>) {
         if self.span_events.clone() & FmtSpan::CLOSE != FmtSpan::NONE {
-            let mut human_event = self.event(
-                *ctx.metadata(&id)
-                    .expect("Metadata should exist for the span ID")
-                    .level(),
-                ctx.span_scope(&id),
-            );
+            let mut human_event = self.event_for_id(&id, ctx);
             human_event.fields.message = Some("close".into());
             print!("{human_event}");
             self.update_long(human_event.last_event_was_long);
