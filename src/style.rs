@@ -1,12 +1,12 @@
 use owo_colors::OwoColorize;
 use owo_colors::Stream::Stdout;
-use owo_colors::Style;
+use owo_colors::Style as OwoStyle;
 use tracing::Level;
 
 use super::event::SpanInfo;
 
 #[derive(Debug)]
-pub struct EventStyle {
+pub struct Style {
     /// First-line indent text.
     indent_text: &'static str,
 
@@ -14,29 +14,29 @@ pub struct EventStyle {
     pub subsequent_indent: &'static str,
 
     /// Style for first-line indent text.
-    indent: Style,
+    indent: OwoStyle,
 
     /// Style for message text.
-    text: Style,
+    text: OwoStyle,
 
     /// Style for field names.
-    field_name: Style,
+    field_name: OwoStyle,
 
     /// Style for field values.
-    field_value: Style,
+    field_value: OwoStyle,
 
     /// Style for span names.
-    span_name: Style,
+    span_name: OwoStyle,
 }
 
-impl EventStyle {
+impl Style {
     pub fn new(level: Level) -> Self {
         let indent_text;
-        let mut indent = Style::new();
-        let mut text = Style::new();
-        let mut field_name = Style::new().bold();
-        let mut field_value = Style::new();
-        let mut span_name = Style::new();
+        let mut indent = OwoStyle::new();
+        let mut text = OwoStyle::new();
+        let mut field_name = OwoStyle::new().bold();
+        let mut field_value = OwoStyle::new();
+        let mut span_name = OwoStyle::new();
 
         match level {
             Level::TRACE => {
