@@ -3,7 +3,7 @@ use owo_colors::Stream::Stdout;
 use owo_colors::Style as OwoStyle;
 use tracing::Level;
 
-use super::event::SpanInfo;
+use super::SpanInfo;
 
 #[derive(Debug)]
 pub struct Style {
