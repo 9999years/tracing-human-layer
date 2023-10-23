@@ -58,15 +58,16 @@ impl HumanLayer {
         self
     }
 
-    fn visitor<S>(&self, level: Level, scope: Option<Scope<'_, S>>) -> HumanEvent
+    fn event<S>(&self, level: Level, scope: Option<Scope<'_, S>>) -> HumanEvent
     where
         S: tracing::Subscriber,
         S: for<'lookup> LookupSpan<'lookup>,
     {
         HumanEvent::new(
             level,
-            AtomicBool::new(self.last_event_was_long.load(Ordering::SeqCst)),
-            scope,
+            scope
+                .map(|scope| event::SpanInfo::from_scope(scope))
+                .unwrap_or_default(),
         )
     }
 }
@@ -90,24 +91,19 @@ where
                     }
                     .to_string(),
                 ));
-        }
 
-        if self.span_events.clone() & FmtSpan::NEW != FmtSpan::NONE {
-            let mut human_event = self.visitor(
-                *ctx.metadata(id)
-                    .expect("Metadata should exist for the span ID")
-                    .level(),
-                ctx.span_scope(id),
-            );
-            human_event.fields.message = Some("new".into());
-            print!("{human_event}");
+            if self.span_events.clone() & FmtSpan::NEW != FmtSpan::NONE {
+                let mut human_event = self.event(*span_ref.metadata().level(), ctx.span_scope(id));
+                human_event.fields.message = Some("new".into());
+                print!("{human_event}");
+            }
         }
     }
 
-    fn on_record(&self, span: &Id, values: &span::Record<'_>, ctx: Context<'_, S>) {
+    fn on_record(&self, id: &Id, values: &span::Record<'_>, ctx: Context<'_, S>) {
         let mut fields = HumanFields::new_span();
         values.record(&mut fields);
-        if let Some(span_ref) = ctx.span(span) {
+        if let Some(span_ref) = ctx.span(id) {
             span_ref
                 .extensions_mut()
                 .insert(FormattedFields::<HumanLayer>::new(
@@ -121,14 +117,14 @@ where
     }
 
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
-        let mut human_event = self.visitor(*event.metadata().level(), ctx.event_scope(event));
+        let mut human_event = self.event(*event.metadata().level(), ctx.event_scope(event));
         event.record(&mut human_event);
         print!("{human_event}");
     }
 
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
         if self.span_events.clone() & FmtSpan::ENTER != FmtSpan::NONE {
-            let mut human_event = self.visitor(
+            let mut human_event = self.event(
                 *ctx.metadata(id)
                     .expect("Metadata should exist for the span ID")
                     .level(),
@@ -141,7 +137,7 @@ where
 
     fn on_exit(&self, id: &Id, ctx: Context<'_, S>) {
         if self.span_events.clone() & FmtSpan::EXIT != FmtSpan::NONE {
-            let mut human_event = self.visitor(
+            let mut human_event = self.event(
                 *ctx.metadata(id)
                     .expect("Metadata should exist for the span ID")
                     .level(),
@@ -154,7 +150,7 @@ where
 
     fn on_close(&self, id: Id, ctx: Context<'_, S>) {
         if self.span_events.clone() & FmtSpan::CLOSE != FmtSpan::NONE {
-            let mut human_event = self.visitor(
+            let mut human_event = self.event(
                 *ctx.metadata(&id)
                     .expect("Metadata should exist for the span ID")
                     .level(),
