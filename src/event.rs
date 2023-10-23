@@ -12,14 +12,14 @@ use tracing_subscriber::registry::Scope;
 
 use crate::textwrap::TextWrapOptionsExt;
 
-use super::fields::HumanFields;
-use super::style::EventStyle;
+use super::HumanFields;
 use super::HumanLayer;
+use super::Style;
 
 #[derive(Debug)]
 pub struct HumanEvent {
     pub last_event_was_long: AtomicBool,
-    style: EventStyle,
+    style: Style,
     /// Spans, in root-to-current (outside-in) order.
     spans: Vec<SpanInfo>,
     pub fields: HumanFields,
@@ -37,7 +37,7 @@ impl HumanEvent {
     {
         Self {
             last_event_was_long,
-            style: EventStyle::new(level),
+            style: Style::new(level),
             fields: HumanFields::new_event(),
             spans: scope
                 .map(|scope| SpanInfo::from_scope(scope))
@@ -194,7 +194,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::INFO),
+                style: Style::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -215,7 +215,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::INFO),
+                style: Style::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -237,7 +237,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::INFO),
+                style: Style::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -262,7 +262,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::INFO),
+                style: Style::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -287,7 +287,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::WARN),
+                style: Style::new(Level::WARN),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -328,7 +328,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::WARN),
+                style: Style::new(Level::WARN),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -369,7 +369,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::TRACE),
+                style: Style::new(Level::TRACE),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Fine-grained tracing info".to_owned()),
@@ -388,7 +388,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::DEBUG),
+                style: Style::new(Level::DEBUG),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Debugging info".to_owned()),
@@ -407,7 +407,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: EventStyle::new(Level::WARN),
+                style: Style::new(Level::WARN),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("I was unable to clone `mercury-web-backend`; most likely this is because you don't have a proper SSH key available.\n\
