@@ -18,7 +18,7 @@ use super::HumanLayer;
 
 #[derive(Debug)]
 pub struct HumanEvent {
-    last_event_was_long: AtomicBool,
+    pub last_event_was_long: AtomicBool,
     style: EventStyle,
     /// Spans, in root-to-current (outside-in) order.
     spans: Vec<SpanInfo>,
@@ -35,26 +35,13 @@ impl HumanEvent {
         S: tracing::Subscriber,
         S: for<'lookup> LookupSpan<'lookup>,
     {
-        let mut spans = Vec::new();
-        if let Some(scope) = scope {
-            for span in scope.from_root() {
-                let extensions = span.extensions();
-                let fields = &extensions
-                    .get::<FormattedFields<HumanLayer>>()
-                    .expect("A span should always have formatted fields")
-                    .fields;
-                spans.push(SpanInfo {
-                    name: span.name(),
-                    target: span.metadata().target().into(),
-                    fields: fields.to_owned(),
-                });
-            }
-        }
         Self {
             last_event_was_long,
             style: EventStyle::new(level),
             fields: HumanFields::new_event(),
-            spans,
+            spans: scope
+                .map(|scope| SpanInfo::from_scope(scope))
+                .unwrap_or_default(),
         }
     }
 }
@@ -206,6 +193,7 @@ mod tests {
     fn test_simple() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
@@ -226,6 +214,7 @@ mod tests {
     fn test_short_format() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
@@ -247,6 +236,7 @@ mod tests {
     fn test_short_format_long_field() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
@@ -271,6 +261,7 @@ mod tests {
     fn test_long_format() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::INFO),
                 fields: HumanFields {
                     extract_message: true,
@@ -295,6 +286,7 @@ mod tests {
     fn test_long_warning() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::WARN),
                 fields: HumanFields {
                     extract_message: true,
@@ -335,6 +327,7 @@ mod tests {
     fn test_long_warning_last_was_long() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::WARN),
                 fields: HumanFields {
                     extract_message: true,
@@ -375,6 +368,7 @@ mod tests {
     fn test_trace() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::TRACE),
                 fields: HumanFields {
                     extract_message: true,
@@ -393,6 +387,7 @@ mod tests {
     fn test_debug() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::DEBUG),
                 fields: HumanFields {
                     extract_message: true,
@@ -411,6 +406,7 @@ mod tests {
     fn test_wrapping() {
         check(
             HumanEvent {
+                last_event_was_long: AtomicBool::new(false),
                 style: EventStyle::new(Level::WARN),
                 fields: HumanFields {
                     extract_message: true,

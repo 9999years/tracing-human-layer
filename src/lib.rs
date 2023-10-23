@@ -65,10 +65,14 @@ impl HumanLayer {
     {
         HumanEvent::new(
             level,
-            scope
-                .map(|scope| event::SpanInfo::from_scope(scope))
-                .unwrap_or_default(),
+            self.last_event_was_long.load(Ordering::SeqCst).into(),
+            scope,
         )
+    }
+
+    fn update_long(&self, last_event_was_long: AtomicBool) {
+        self.last_event_was_long
+            .store(last_event_was_long.load(Ordering::SeqCst), Ordering::SeqCst);
     }
 }
 
@@ -96,6 +100,7 @@ where
                 let mut human_event = self.event(*span_ref.metadata().level(), ctx.span_scope(id));
                 human_event.fields.message = Some("new".into());
                 print!("{human_event}");
+                self.update_long(human_event.last_event_was_long);
             }
         }
     }
@@ -120,6 +125,7 @@ where
         let mut human_event = self.event(*event.metadata().level(), ctx.event_scope(event));
         event.record(&mut human_event);
         print!("{human_event}");
+        self.update_long(human_event.last_event_was_long);
     }
 
     fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
@@ -132,6 +138,7 @@ where
             );
             human_event.fields.message = Some("enter".into());
             print!("{human_event}");
+            self.update_long(human_event.last_event_was_long);
         }
     }
 
@@ -145,6 +152,7 @@ where
             );
             human_event.fields.message = Some("exit".into());
             print!("{human_event}");
+            self.update_long(human_event.last_event_was_long);
         }
     }
 
@@ -158,6 +166,7 @@ where
             );
             human_event.fields.message = Some("close".into());
             print!("{human_event}");
+            self.update_long(human_event.last_event_was_long);
         }
     }
 }
