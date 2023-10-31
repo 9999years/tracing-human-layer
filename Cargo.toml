@@ -1,7 +1,10 @@
 [package]
 name = "tracing-human-layer"
 version = "0.0.0"
+description = "A human-friendly tracing console output layer"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/9999years/tracing-human-layer"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -7,6 +7,7 @@
   inputs,
   rustPlatform,
   rust-analyzer,
+  cargo-release,
 }: let
   inherit (inputs) crane advisory-db;
   craneLib = crane.lib.${system};
@@ -64,6 +65,7 @@
     # Extra development tools (cargo and rustc are included by default).
     packages = [
       rust-analyzer
+      cargo-release
     ];
   };
 in
