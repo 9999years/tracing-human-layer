@@ -25,6 +25,7 @@ writeShellApplication {
       --verbose \
       --execute \
       --no-confirm \
+      --no-verify \
       "$@"
   '';
 }
