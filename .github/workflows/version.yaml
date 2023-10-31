@@ -2,11 +2,6 @@
 # This workflow runs when PRs labeled `major`, `minor`, or `patch` are closed
 # and increments version numbers. Then, it opens a PR labeled `release` for the
 # changes. When that PR is merged, a release is created (see `release.yaml`).
-#
-# Are you here because I left Mercury and now my personal access token is
-# invalid for workflows, breaking CI? You'll want to go to
-#     https://github.com/MercuryTechnologies/ghciwatch/settings/secrets/actions
-# and update the `REPO_GITHUB_TOKEN` secret to a new, valid token.
 
 on:
   pull_request:

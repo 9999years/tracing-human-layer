@@ -37,6 +37,15 @@
       (lib.filterAttrs (name: value: lib.isDerivation value) packages)
       // {
         default = packages.tracing-human-layer;
+        docs = packages.tracing-human-layer-docs;
+        docs-tarball = packages.tracing-human-layer-docs-tarball;
+
+        # This lets us use `nix run .#cargo` to run Cargo commands without
+        # loading the entire `nix develop` shell (which includes
+        # `rust-analyzer`).
+        #
+        # Used in `.github/workflows/release.yaml`.
+        cargo = pkgs.cargo;
       });
 
     checks = eachSystem (system: self.packages.${system}.tracing-human-layer.checks);

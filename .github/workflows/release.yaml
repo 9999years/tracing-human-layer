@@ -65,78 +65,30 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install rustup
-        uses: dtolnay/rust-toolchain@stable
-        if: runner.os == 'macOS'
-        with:
-          target: x86_64-apple-darwin, aarch64-apple-darwin
-
-      - name: Log versions
-        if: runner.os == 'macOS'
-        run: which -a rustup && rustup --version
-
-      - name: Build (macOS, x86_64)
-        if: runner.os == 'macOS'
-        # Nix cross-compilation is broken on macOS, but cargo works fine.
-        # See: https://github.com/NixOS/nixpkgs/issues/180771
-        run: cargo build --release --target x86_64-apple-darwin
-
-      - name: Build (macOS, aarch64)
-        if: runner.os == 'macOS'
-        run: cargo build --release --target aarch64-apple-darwin
-
-      - name: Create macOS universal executable
-        if: runner.os == 'macOS'
-        run: |
-          lipo -create -output target/release/ghciwatch-macos \
-            target/x86_64-apple-darwin/release/ghciwatch \
-            target/aarch64-apple-darwin/release/ghciwatch
-
       - uses: cachix/install-nix-action@v22
-        if: runner.os == 'Linux'
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
           extra_nix_config: |
             extra-experimental-features = nix-command flakes
             accept-flake-config = true
 
-      - name: Create target directory (Linux)
-        if: runner.os == 'Linux'
-        run: mkdir -p target/
-
-      - name: Build (Linux, x86_64)
-        if: runner.os == 'Linux'
+      - name: Build documentation
         run: |
-          mkdir -p target/
-          RESULT=$(nix build --no-link --print-out-paths --print-build-logs .#ghciwatch)
-          cp "$RESULT/bin/ghciwatch" target/ghciwatch-x86_64-linux
+          RESULT=$(nix build --no-link --print-out-paths --print-build-logs .#docs-tarball)
+          mkdir target
+          cp "$RESULT"/* target/
 
-      - name: Build (Linux, aarch64)
-        if: runner.os == 'Linux'
-        run: |
-          RESULT=$(nix build --no-link --print-out-paths --print-build-logs .#ghciwatch-aarch64-linux)
-          cp "$RESULT/bin/ghciwatch" target/ghciwatch-aarch64-linux
-
-      - name: Upload macOS executable
+      - name: Upload documentation
         uses: actions/upload-artifact@v3
-        if: runner.os == 'macOS'
         with:
-          name: macos
-          path: target/release/ghciwatch-macos
-
-      - name: Upload Linux executables
-        uses: actions/upload-artifact@v3
-        if: runner.os == 'Linux'
-        with:
-          name: linux
+          name: documentation
           path: |
-            target/ghciwatch-x86_64-linux
-            target/ghciwatch-aarch64-linux
+            target/*
 
       - name: Publish to crates.io
         if: runner.os == 'Linux'
@@ -186,9 +138,7 @@ jobs:
           generate_release_notes: true
           tag_name: v${{ needs.version.outputs.version }}
           files: |
-            macos/ghciwatch-macos
-            linux/ghciwatch-x86_64-linux
-            linux/ghciwatch-aarch64-linux
+            documentation/*
 
       - name: Comment on PR with link to the release
         uses: peter-evans/create-or-update-comment@v2
