@@ -22,7 +22,6 @@ writeShellApplication {
     cargo release --version
 
     cargo release \
-      --verbose \
       --execute \
       --no-confirm \
       --no-verify \
