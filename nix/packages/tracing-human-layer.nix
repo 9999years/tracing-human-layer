@@ -35,21 +35,21 @@
     };
 
   checks = {
-    home-mangler-tests = craneLib.cargoNextest (commonArgs
+    tracing-human-layer-tests = craneLib.cargoNextest (commonArgs
       // {
         NEXTEST_HIDE_PROGRESS_BAR = "true";
       });
-    home-mangler-clippy = craneLib.cargoClippy (commonArgs
+    tracing-human-layer-clippy = craneLib.cargoClippy (commonArgs
       // {
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       });
-    home-mangler-doc = craneLib.cargoDoc (commonArgs
+    tracing-human-layer-rustdoc = craneLib.cargoDoc (commonArgs
       // {
         cargoDocExtraArgs = "--document-private-items";
         RUSTDOCFLAGS = "-D warnings";
       });
-    home-mangler-fmt = craneLib.cargoFmt commonArgs;
-    home-mangler-audit = craneLib.cargoAudit (commonArgs
+    tracing-human-layer-fmt = craneLib.cargoFmt commonArgs;
+    tracing-human-layer-audit = craneLib.cargoAudit (commonArgs
       // {
         inherit advisory-db;
       });
@@ -72,15 +72,19 @@ in
   craneLib.buildPackage (commonArgs
     // {
       # Don't run tests; we'll do that in a separate derivation.
-      # This will allow people to install and depend on `home-mangler`
+      # This will allow people to install and depend on `tracing-human-layer`
       # without downloading a half dozen different versions of GHC.
       doCheck = false;
 
-      # Only build `home-mangler`, not the test macros.
+      # Only build `tracing-human-layer`, not the test macros.
       cargoBuildCommand = "cargoWithProfile build";
 
       passthru = {
-        inherit checks;
-        inherit devShell;
+        inherit
+          checks
+          devShell
+          commonArgs
+          craneLib
+          ;
       };
     })
