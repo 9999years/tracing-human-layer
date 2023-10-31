@@ -5,8 +5,20 @@ description = "A human-friendly tracing console output layer"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/9999years/tracing-human-layer"
-
+authors = [
+    "Rebecca Turner <rbt@sent.as>"
+]
+keywords = ["tracing"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# See: https://github.com/crate-ci/cargo-release/blob/master/docs/reference.md
+[workspace.metadata.release]
+# Set the commit message.
+pre-release-commit-message = "Release {{crate_name}} version {{version}}"
+consolidate-commits = false # One commit per crate.
+tag = false # Don't tag commits.
+push = false # Don't do `git push`.
+publish = false # Don't do `cargo publish`.
 
 [dependencies]
 itertools = "0.11.0"
