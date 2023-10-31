@@ -9,10 +9,6 @@ on:
 
 name: Label PRs with `patch` by default
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   # It seems like GitHub doesn't correctly populate the PR labels for the
   # `opened` event, so we use the GitHub API to fetch them separately.
@@ -40,6 +36,9 @@ jobs:
     name: Label PR with `patch`
     needs:
       - get-labels
+    permissions:
+      contents: read
+      pull-requests: write
     # This has been endlessly frustrating. I have no clue why I've had such bad
     # luck with this particular `if`, especially when I use the same logic
     # elsewhere in these actions and it seems to Just Work there. Misery!

@@ -53,7 +53,6 @@ jobs:
   version:
     name: Bump version and create release PR
     permissions:
-      contents: read
       pull-requests: write
     needs:
       - if_merged
