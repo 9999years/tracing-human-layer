@@ -2,8 +2,8 @@ use std::fmt;
 
 use itertools::Itertools;
 
-use crate::Style;
 use crate::HumanFields;
+use crate::Style;
 
 #[derive(Debug)]
 pub struct StyledSpanFields {

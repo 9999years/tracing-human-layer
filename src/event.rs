@@ -270,6 +270,7 @@ mod tests {
                 spans: vec![],
             },
             expect![[r#"
+
                 [33m⚠ [0m[33m`nix doctor` found potential issues with your Nix installation:
                   Running checks against store uri: daemon
                   [FAIL] Multiple versions of nix found in PATH:
@@ -279,6 +280,7 @@ mod tests {
                   [PASS] All profiles are gcroots.
                   [PASS] Client protocol matches store protocol.
                   [0m
+
             "#]],
         );
     }
@@ -311,6 +313,7 @@ mod tests {
                 spans: vec![],
             },
             expect![[r#"
+
                 [33m⚠ [0m[33m`nix doctor` found potential issues with your Nix installation:
                   Running checks against store uri: daemon
                   [FAIL] Multiple versions of nix found in PATH:
@@ -320,6 +323,7 @@ mod tests {
                   [PASS] All profiles are gcroots.
                   [PASS] Client protocol matches store protocol.
                   [0m
+
             "#]],
         );
     }
@@ -378,12 +382,14 @@ mod tests {
                 spans: vec![],
             },
             expect![[r#"
+
                 [33m⚠ [0m[33mI was unable to clone `mercury-web-backend`; most likely this is because you
                   don't have a proper SSH key available.
                   Note that access to Mercury repositories on GitHub over SSH is required to
                   enter the `nix develop` shell in `mercury-web-backend`
                   See:
                   https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account[0m
+
             "#]],
         );
     }
