@@ -38,78 +38,78 @@ fn example_output(name: &str, args: &[&str]) -> Output {
 
 #[test]
 fn my_test() {
-    let output = example_output("demo", &[]);
+    let output = example_output("demo", &["--color"]);
 
     let stdout = expect![[r#"
-        TRACE Trace event.
-        DEBUG Debug event.
-        • Info event. field="field-value"
-        ⚠ Warn event.
-        ⚠ Error event.
+        [35mTRACE [0m[2mTrace event.[0m
+        [34mDEBUG [0m[2mDebug event.[0m
+        [32m• [0mInfo event. [1mfield[0m="field-value"
+        [33m⚠ [0m[33mWarn event.[0m
+        [31m⚠ [0m[31mError event.[0m
 
-        • Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+        [32m• [0mLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
           incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
           nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-        • Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+        [32m• [0mLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
           incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
           nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-        • Info event.
-          field="field-value"
-          other_field="my-other-field-value"
-        • new
-          in my-span{path="my/cool/path.txt"}
-        • new
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        • new
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        TRACE Trace event.
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        DEBUG Debug event.
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        • Info event. field="field-value"
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        ⚠ Warn event.
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        ⚠ Error event.
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
+        [32m• [0mInfo event.
+          [1mfield[0m="field-value"
+          [1mother_field[0m="my-other-field-value"
+        [32m• [0mnew
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [32m• [0mnew
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [32m• [0mnew
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [35mTRACE [0m[2mTrace event.[0m
+          [2min [0m[2mmy-inner-span[0m
+          [2min [0m[2mcopy[0m{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0m[2mmy-span[0m{[1mpath[0m="my/cool/path.txt"}
+        [34mDEBUG [0m[2mDebug event.[0m
+          [2min [0m[2mmy-inner-span[0m
+          [2min [0m[2mcopy[0m{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0m[2mmy-span[0m{[1mpath[0m="my/cool/path.txt"}
+        [32m• [0mInfo event. [1mfield[0m="field-value"
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [33m⚠ [0m[33mWarn event.[0m
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [31m⚠ [0m[31mError event.[0m
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
 
-        • Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+        [32m• [0mLorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
           incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
           nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
 
-        • Info event.
-          field="field-value"
-          other_field="my-other-field-value"
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        • close
-          in my-inner-span
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        • close
-          in copy{path="my/cool/path.txt" other_path="my/second/path.txt"}
-          in my-span{path="my/cool/path.txt"}
-        • close
-          in my-span{path="my/cool/path.txt"}
+        [32m• [0mInfo event.
+          [1mfield[0m="field-value"
+          [1mother_field[0m="my-other-field-value"
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [32m• [0mclose
+          [2min [0mmy-inner-span
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [32m• [0mclose
+          [2min [0mcopy{[1mpath[0m="my/cool/path.txt" [1mother_path[0m="my/second/path.txt"}
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
+        [32m• [0mclose
+          [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
     "#]];
     stdout.assert_eq(&String::from_utf8(output.stdout).unwrap());
 
