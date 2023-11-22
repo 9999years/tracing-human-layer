@@ -28,5 +28,9 @@ tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
 
 [dev-dependencies]
+assert_cmd = "2.0.12"
+assert_fs = "1.0.13"
+clap = { version = "4.4.8", features = ["derive"] }
+escargot = "0.5.8"
 expect-test = "1.4.1"
 indoc = "2.0.4"
