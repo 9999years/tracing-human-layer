@@ -1,4 +1,5 @@
 use clap::Parser;
+use tracing_human_layer::OutputStream;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -7,8 +8,12 @@ use tracing_human_layer::HumanLayer;
 
 #[derive(Parser)]
 struct Opts {
+    /// Use colored output.
     #[arg(long)]
     color: bool,
+    /// Write output to stderr.
+    #[arg(long)]
+    stderr: bool,
 }
 
 fn main() {
@@ -18,9 +23,13 @@ fn main() {
         owo_colors::set_override(true);
     }
 
-    tracing_subscriber::registry()
-        .with(HumanLayer::default().with_span_events(FmtSpan::NEW | FmtSpan::CLOSE))
-        .init();
+    let mut layer = HumanLayer::default().with_span_events(FmtSpan::NEW | FmtSpan::CLOSE);
+
+    if opts.stderr {
+        layer = layer.with_output_stream(OutputStream::Stderr);
+    }
+
+    tracing_subscriber::registry().with(layer).init();
 
     emit_events();
 }

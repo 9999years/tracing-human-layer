@@ -1,7 +1,9 @@
 use std::fmt::Debug;
+use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
+use parking_lot::Mutex;
 use tracing::span;
 use tracing::Event;
 use tracing::Id;
@@ -16,10 +18,12 @@ use tracing_subscriber::Layer;
 
 use crate::HumanEvent;
 use crate::HumanFields;
+use crate::OutputStream;
+use crate::OutputWriter;
 use crate::Style;
 use crate::StyledSpanFields;
 
-#[derive(Debug)]
+/// A human-friendly [`tracing_subscriber::Layer`].
 pub struct HumanLayer {
     /// We print blank lines before and after long log messages to help visually separate them.
     ///
@@ -32,6 +36,16 @@ pub struct HumanLayer {
     last_event_was_long: AtomicBool,
     /// Which span events to emit.
     span_events: FmtSpan,
+    /// The stream where output is written.
+    output_stream: owo_colors::Stream,
+    /// The writer where output is written.
+    output_writer: Mutex<OutputWriter>,
+}
+
+impl Debug for HumanLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HumanLayer").finish_non_exhaustive()
+    }
 }
 
 impl Default for HumanLayer {
@@ -39,11 +53,26 @@ impl Default for HumanLayer {
         Self {
             last_event_was_long: Default::default(),
             span_events: FmtSpan::NONE,
+            output_stream: owo_colors::Stream::Stdout,
+            output_writer: OutputStream::Stdout.writer().into(),
         }
     }
 }
 
 impl HumanLayer {
+    /// Construct a new [`HumanLayer`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the stream log messages are written to.
+    pub fn with_output_stream(mut self, output_stream: OutputStream) -> Self {
+        self.output_stream = output_stream.into();
+        self.output_writer = output_stream.writer().into();
+        self
+    }
+
+    /// Set which span events are logged.
     pub fn with_span_events(mut self, span_events: FmtSpan) -> Self {
         self.span_events = span_events;
         self
@@ -103,7 +132,7 @@ where
             if self.span_events.clone() & FmtSpan::NEW != FmtSpan::NONE {
                 let mut human_event = self.event(*span_ref.metadata().level(), ctx.span_scope(id));
                 human_event.fields.message = Some("new".into());
-                print!("{human_event}");
+                let _ = write!(self.output_writer.lock(), "{human_event}");
                 self.update_long(human_event.last_event_was_long);
             }
         }
@@ -128,7 +157,7 @@ where
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
         let mut human_event = self.event(*event.metadata().level(), ctx.event_scope(event));
         event.record(&mut human_event);
-        print!("{human_event}");
+        let _ = write!(self.output_writer.lock(), "{human_event}");
         self.update_long(human_event.last_event_was_long);
     }
 
@@ -136,7 +165,7 @@ where
         if self.span_events.clone() & FmtSpan::ENTER != FmtSpan::NONE {
             let mut human_event = self.event_for_id(id, ctx);
             human_event.fields.message = Some("enter".into());
-            print!("{human_event}");
+            let _ = write!(self.output_writer.lock(), "{human_event}");
             self.update_long(human_event.last_event_was_long);
         }
     }
@@ -145,7 +174,7 @@ where
         if self.span_events.clone() & FmtSpan::EXIT != FmtSpan::NONE {
             let mut human_event = self.event_for_id(id, ctx);
             human_event.fields.message = Some("exit".into());
-            print!("{human_event}");
+            let _ = write!(self.output_writer.lock(), "{human_event}");
             self.update_long(human_event.last_event_was_long);
         }
     }
@@ -154,7 +183,7 @@ where
         if self.span_events.clone() & FmtSpan::CLOSE != FmtSpan::NONE {
             let mut human_event = self.event_for_id(&id, ctx);
             human_event.fields.message = Some("close".into());
-            print!("{human_event}");
+            let _ = write!(self.output_writer.lock(), "{human_event}");
             self.update_long(human_event.last_event_was_long);
         }
     }
