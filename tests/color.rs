@@ -1,44 +1,9 @@
-use std::borrow::Cow;
-use std::path::PathBuf;
-use std::process::Command;
-use std::process::Output;
-use std::process::Stdio;
-
-use escargot::format::Message;
 use expect_test::expect;
-
-fn example_path(name: &str) -> PathBuf {
-    let messages = escargot::CargoBuild::new().example(name).exec().unwrap();
-    for message in messages {
-        if let Message::CompilerArtifact(artifact) = message.unwrap().decode().unwrap() {
-            if artifact.target.name != name
-                || !artifact.target.kind.contains(&Cow::Borrowed("example"))
-            {
-                continue;
-            }
-            return artifact.executable.unwrap().into_owned();
-        }
-    }
-    panic!("No example output binary found");
-}
-
-fn example_output(name: &str, args: &[&str]) -> Output {
-    let example = example_path(name);
-    let output = Command::new(example)
-        .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .unwrap();
-
-    assert!(output.status.success());
-
-    output
-}
+use test_harness::Example;
 
 #[test]
-fn my_test() {
-    let output = example_output("demo", &["--color"]);
+fn test_color() {
+    let output = Example::name("demo").arg("--color").output().unwrap();
 
     let stdout = expect![[r#"
         [35mTRACE [0m[2mTrace event.[0m
@@ -111,8 +76,8 @@ fn my_test() {
         [32m• [0mclose
           [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
     "#]];
-    stdout.assert_eq(&String::from_utf8(output.stdout).unwrap());
+    stdout.assert_eq(&output.stdout);
 
     let stderr = expect![[""]];
-    stderr.assert_eq(&String::from_utf8(output.stderr).unwrap());
+    stderr.assert_eq(&output.stderr);
 }

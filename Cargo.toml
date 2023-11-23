@@ -1,3 +1,9 @@
+[workspace]
+members = [
+    "test-harness",
+]
+resolver = "2"
+
 [package]
 name = "tracing-human-layer"
 version = "0.1.1"
@@ -28,6 +34,7 @@ tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
 
 [dev-dependencies]
+test-harness = { path = "test-harness" }
 assert_cmd = "2.0.12"
 assert_fs = "1.0.13"
 clap = { version = "4.4.8", features = ["derive"] }
