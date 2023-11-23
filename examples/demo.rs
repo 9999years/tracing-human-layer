@@ -1,10 +1,23 @@
+use clap::Parser;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use tracing_human_layer::HumanLayer;
 
+#[derive(Parser)]
+struct Opts {
+    #[arg(long)]
+    color: bool,
+}
+
 fn main() {
+    let opts = Opts::parse();
+
+    if opts.color {
+        owo_colors::set_override(true);
+    }
+
     tracing_subscriber::registry()
         .with(HumanLayer::default().with_span_events(FmtSpan::NEW | FmtSpan::CLOSE))
         .init();
