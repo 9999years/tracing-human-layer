@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::io::Stdout;
 use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -18,13 +19,11 @@ use tracing_subscriber::Layer;
 
 use crate::HumanEvent;
 use crate::HumanFields;
-use crate::OutputStream;
-use crate::OutputWriter;
 use crate::Style;
 use crate::StyledSpanFields;
 
 /// A human-friendly [`tracing_subscriber::Layer`].
-pub struct HumanLayer {
+pub struct HumanLayer<W = Stdout> {
     /// We print blank lines before and after long log messages to help visually separate them.
     ///
     /// This becomes an issue if two long log messages are printed one after another.
@@ -36,10 +35,10 @@ pub struct HumanLayer {
     last_event_was_long: AtomicBool,
     /// Which span events to emit.
     span_events: FmtSpan,
-    /// The stream where output is written.
-    output_stream: owo_colors::Stream,
+    /// Whether to color the output.
+    color_output: bool,
     /// The writer where output is written.
-    output_writer: Mutex<OutputWriter>,
+    output_writer: Mutex<W>,
 }
 
 impl Debug for HumanLayer {
@@ -53,8 +52,8 @@ impl Default for HumanLayer {
         Self {
             last_event_was_long: Default::default(),
             span_events: FmtSpan::NONE,
-            output_stream: owo_colors::Stream::Stdout,
-            output_writer: OutputStream::Stdout.writer().into(),
+            color_output: true,
+            output_writer: Mutex::new(std::io::stdout()),
         }
     }
 }
@@ -64,11 +63,24 @@ impl HumanLayer {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
-    /// Set the stream log messages are written to.
-    pub fn with_output_stream(mut self, output_stream: OutputStream) -> Self {
-        self.output_stream = output_stream.into();
-        self.output_writer = output_stream.writer().into();
+impl<W> HumanLayer<W> {
+    /// Set the writer that log messages are written to.
+    ///
+    /// This does not change colored output by default.
+    pub fn with_output_writer<W2>(self, output_writer: W2) -> HumanLayer<W2> {
+        HumanLayer {
+            last_event_was_long: self.last_event_was_long,
+            span_events: self.span_events,
+            color_output: self.color_output,
+            output_writer: Mutex::new(output_writer),
+        }
+    }
+
+    /// Set the output coloring.
+    pub fn with_color_output(mut self, color_output: bool) -> Self {
+        self.color_output = color_output;
         self
     }
 
@@ -92,6 +104,7 @@ impl HumanLayer {
             level,
             self.last_event_was_long.load(Ordering::SeqCst).into(),
             scope,
+            self.color_output,
         )
     }
 
@@ -109,11 +122,12 @@ impl HumanLayer {
     }
 }
 
-impl<S> Layer<S> for HumanLayer
+impl<S, W> Layer<S> for HumanLayer<W>
 where
     S: Subscriber,
     S: for<'lookup> LookupSpan<'lookup>,
     Self: 'static,
+    W: Write,
 {
     fn on_new_span(&self, attrs: &span::Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         let mut fields = HumanFields::new_span();
@@ -123,7 +137,7 @@ where
                 .extensions_mut()
                 .insert(FormattedFields::<HumanLayer>::new(
                     StyledSpanFields {
-                        style: Style::new(*attrs.metadata().level()),
+                        style: Style::new(*attrs.metadata().level(), self.color_output),
                         fields,
                     }
                     .to_string(),
@@ -146,7 +160,7 @@ where
                 .extensions_mut()
                 .insert(FormattedFields::<HumanLayer>::new(
                     StyledSpanFields {
-                        style: Style::new(*span_ref.metadata().level()),
+                        style: Style::new(*span_ref.metadata().level(), self.color_output),
                         fields,
                     }
                     .to_string(),

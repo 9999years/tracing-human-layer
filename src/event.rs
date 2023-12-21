@@ -29,6 +29,7 @@ impl HumanEvent {
         level: Level,
         last_event_was_long: AtomicBool,
         scope: Option<Scope<'_, S>>,
+        color: bool,
     ) -> Self
     where
         S: tracing::Subscriber,
@@ -36,7 +37,7 @@ impl HumanEvent {
     {
         Self {
             last_event_was_long,
-            style: Style::new(level),
+            style: Style::new(level, color),
             fields: HumanFields::new_event(),
             spans: scope
                 .map(|scope| SpanInfo::from_scope(scope))
@@ -154,7 +155,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO),
+                style: Style::new(Level::INFO, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -175,7 +176,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO),
+                style: Style::new(Level::INFO, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -197,7 +198,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO),
+                style: Style::new(Level::INFO, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -222,7 +223,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO),
+                style: Style::new(Level::INFO, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -247,7 +248,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN),
+                style: Style::new(Level::WARN, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -290,7 +291,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN),
+                style: Style::new(Level::WARN, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -333,7 +334,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::TRACE),
+                style: Style::new(Level::TRACE, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Fine-grained tracing info".to_owned()),
@@ -352,7 +353,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::DEBUG),
+                style: Style::new(Level::DEBUG, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Debugging info".to_owned()),
@@ -371,7 +372,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN),
+                style: Style::new(Level::WARN, true),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("I was unable to clone `mercury-web-backend`; most likely this is because you don't have a proper SSH key available.\n\

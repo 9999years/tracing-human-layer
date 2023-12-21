@@ -1,5 +1,5 @@
-use owo_colors::OwoColorize;
-use owo_colors::Stream::Stdout;
+use std::fmt::Display;
+
 use owo_colors::Style as OwoStyle;
 use tracing::Level;
 
@@ -12,6 +12,9 @@ pub struct Style {
 
     /// Subsequent indent text.
     pub subsequent_indent: &'static str,
+
+    /// Should output be colored?
+    color: bool,
 
     /// Style for first-line indent text.
     indent: OwoStyle,
@@ -27,11 +30,15 @@ pub struct Style {
 
     /// Style for span names.
     span_name: OwoStyle,
+
+    /// Style for `in` in `in span ...`
+    span_in: OwoStyle,
 }
 
 impl Style {
-    pub fn new(level: Level) -> Self {
+    pub fn new(level: Level, color: bool) -> Self {
         let indent_text;
+        let span_in = OwoStyle::new().dimmed();
         let mut indent = OwoStyle::new();
         let mut text = OwoStyle::new();
         let mut field_name = OwoStyle::new().bold();
@@ -74,48 +81,92 @@ impl Style {
         Self {
             indent_text,
             subsequent_indent: "  ",
+            color,
             indent,
             text,
             field_name,
             field_value,
             span_name,
+            span_in,
         }
     }
 
     pub fn style_field(&self, name: &str, value: &str) -> String {
         format!(
             "{name}{value}",
-            name = name.if_supports_color(Stdout, |text| self.field_name.style(text)),
-            value =
-                format!("={value}").if_supports_color(Stdout, |text| self.field_value.style(text)),
+            name = name.colored(self.color, self.field_name),
+            value = format!("={value}").colored(self.color, self.field_value),
         )
     }
 
     pub fn indent_colored(&self) -> String {
         self.indent_text
-            .if_supports_color(Stdout, |text| self.indent.style(text))
+            .colored(self.color, self.indent)
             .to_string()
     }
 
     pub fn style_message(&self, message: &str) -> String {
-        message
-            .if_supports_color(Stdout, |text| self.text.style(text))
-            .to_string()
+        message.colored(self.color, self.text).to_string()
     }
 
     pub fn style_span_name(&self, name: &str) -> String {
-        name.if_supports_color(Stdout, |text| self.span_name.style(text))
-            .to_string()
+        name.colored(self.color, self.span_name).to_string()
     }
 
     pub fn style_span(&self, span: &SpanInfo) -> String {
         format!(
             "{in_}{name}{fields}",
-            in_ = "in ".if_supports_color(Stdout, |text| text.dimmed()),
-            name = span
-                .name
-                .if_supports_color(Stdout, |text| self.span_name.style(text)),
+            in_ = "in ".colored(self.color, self.span_in),
+            name = span.name.colored(self.color, self.span_name),
             fields = span.fields,
         )
+    }
+}
+
+trait IntoConditionalColor: Display {
+    fn colored(&self, color: bool, style: OwoStyle) -> ConditionalColor<&Self> {
+        ConditionalColor::new(self).color(color).style(style)
+    }
+}
+
+impl<T> IntoConditionalColor for T where T: Display {}
+
+/// Like `if_supports_color`, but I control it :)
+struct ConditionalColor<T> {
+    color: bool,
+    style: OwoStyle,
+    inner: T,
+}
+
+impl<T> ConditionalColor<T> {
+    pub fn new(inner: T) -> Self {
+        Self {
+            color: true,
+            style: OwoStyle::new(),
+            inner,
+        }
+    }
+
+    pub fn color(mut self, color: bool) -> Self {
+        self.color = color;
+        self
+    }
+
+    pub fn style(mut self, style: OwoStyle) -> Self {
+        self.style = style;
+        self
+    }
+}
+
+impl<T> Display for ConditionalColor<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.color {
+            self.style.style(&self.inner).fmt(f)
+        } else {
+            self.inner.fmt(f)
+        }
     }
 }
