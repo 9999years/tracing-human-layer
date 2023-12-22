@@ -39,3 +39,4 @@ test-harness = { path = "test-harness" }
 clap = { version = "4.4.8", features = ["derive"] }
 expect-test = "1.4.1"
 indoc = "2.0.4"
+supports-color = "2.1.0"
