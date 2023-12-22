@@ -41,9 +41,11 @@ pub struct HumanLayer<W = Stdout> {
     output_writer: Mutex<W>,
 }
 
-impl Debug for HumanLayer {
+impl<W> Debug for HumanLayer<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("HumanLayer").finish_non_exhaustive()
+        f.debug_struct("HumanLayer")
+            .field("color_output", &self.color_output)
+            .finish_non_exhaustive()
     }
 }
 
@@ -59,7 +61,7 @@ impl Default for HumanLayer {
 }
 
 impl HumanLayer {
-    /// Construct a new [`HumanLayer`].
+    /// Construct a new [`HumanLayer`] that writes to [`Stdout`].
     pub fn new() -> Self {
         Self::default()
     }
