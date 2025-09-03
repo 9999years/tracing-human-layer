@@ -8,7 +8,7 @@ use parking_lot::Mutex;
 use tracing::span;
 use tracing::Event;
 use tracing::Id;
-use tracing::Level;
+use tracing::Metadata;
 use tracing::Subscriber;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::fmt::FormattedFields;
@@ -19,12 +19,17 @@ use tracing_subscriber::Layer;
 
 use crate::HumanEvent;
 use crate::HumanFields;
+use crate::LayerStyles;
+use crate::ProvideStyle;
 use crate::ShouldColor;
-use crate::Style;
+use crate::SpanInfo;
 use crate::StyledSpanFields;
 
+#[cfg(doc)]
+use crate::Style;
+
 /// A human-friendly [`tracing_subscriber::Layer`].
-pub struct HumanLayer<W = Stderr> {
+pub struct HumanLayer<W = Stderr, S = LayerStyles> {
     /// We print blank lines before and after long log messages to help visually separate them.
     ///
     /// This becomes an issue if two long log messages are printed one after another.
@@ -40,9 +45,11 @@ pub struct HumanLayer<W = Stderr> {
     color_output: ShouldColor,
     /// The writer where output is written.
     output_writer: Mutex<W>,
+    /// Styles for writing events.
+    styles: S,
 }
 
-impl<W> Debug for HumanLayer<W> {
+impl<W, S> Debug for HumanLayer<W, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HumanLayer")
             .field("color_output", &self.color_output)
@@ -57,6 +64,7 @@ impl Default for HumanLayer {
             span_events: FmtSpan::NONE,
             color_output: ShouldColor::Always,
             output_writer: Mutex::new(std::io::stderr()),
+            styles: LayerStyles::new(),
         }
     }
 }
@@ -68,16 +76,17 @@ impl HumanLayer {
     }
 }
 
-impl<W> HumanLayer<W> {
+impl<W, S> HumanLayer<W, S> {
     /// Set the writer that log messages are written to.
     ///
     /// This does not change colored output by default.
-    pub fn with_output_writer<W2>(self, output_writer: W2) -> HumanLayer<W2> {
+    pub fn with_output_writer<W2>(self, output_writer: W2) -> HumanLayer<W2, S> {
         HumanLayer {
             last_event_was_long: self.last_event_was_long,
             span_events: self.span_events,
             color_output: self.color_output,
             output_writer: Mutex::new(output_writer),
+            styles: self.styles,
         }
     }
 
@@ -98,33 +107,58 @@ impl<W> HumanLayer<W> {
         self
     }
 
+    /// Set the output style to the given [`ProvideStyle`] implementation, which supplies
+    /// [`Style`]s.
+    pub fn with_style_provider<S2>(self, styles: S2) -> HumanLayer<W, S2> {
+        HumanLayer {
+            last_event_was_long: self.last_event_was_long,
+            span_events: self.span_events,
+            color_output: self.color_output,
+            output_writer: self.output_writer,
+            styles,
+        }
+    }
+
     fn update_long(&self, last_event_was_long: AtomicBool) {
         self.last_event_was_long
             .store(last_event_was_long.load(Ordering::SeqCst), Ordering::SeqCst);
     }
+}
 
-    fn event<S>(&self, level: Level, scope: Option<Scope<'_, S>>) -> HumanEvent
+impl<W, S> HumanLayer<W, S>
+where
+    S: ProvideStyle,
+{
+    fn event<R>(
+        &self,
+        metadata: &'static Metadata<'static>,
+        scope: Option<Scope<'_, R>>,
+    ) -> HumanEvent<'_>
     where
-        S: tracing::Subscriber,
-        S: for<'lookup> LookupSpan<'lookup>,
+        R: tracing::Subscriber,
+        R: for<'lookup> LookupSpan<'lookup>,
     {
-        HumanEvent::new(
-            level,
-            self.last_event_was_long.load(Ordering::SeqCst).into(),
-            scope,
-            self.color_output,
-        )
+        HumanEvent {
+            // Note: We load the value out of our `AtomicBool` and then clone it to create a _new_
+            // `AtomicBool`. After writing an event, we update _our_ `AtomicBool`.
+            last_event_was_long: self.last_event_was_long.load(Ordering::SeqCst).into(),
+            style: self.styles.for_metadata(metadata),
+            color: self.color_output,
+            spans: scope
+                .map(|scope| SpanInfo::from_scope(scope))
+                .unwrap_or_default(),
+            fields: HumanFields::new_event(),
+        }
     }
 
-    fn event_for_id<S>(&self, id: &Id, ctx: Context<'_, S>) -> HumanEvent
+    fn event_for_id<U>(&self, id: &Id, ctx: Context<'_, U>) -> HumanEvent<'_>
     where
-        S: tracing::Subscriber,
-        S: for<'lookup> LookupSpan<'lookup>,
+        U: tracing::Subscriber,
+        U: for<'lookup> LookupSpan<'lookup>,
     {
         self.event(
-            *ctx.metadata(id)
-                .expect("Metadata should exist for the span ID")
-                .level(),
+            ctx.metadata(id)
+                .expect("Metadata should exist for the span ID"),
             ctx.span_scope(id),
         )
     }
@@ -145,14 +179,15 @@ where
                 .extensions_mut()
                 .insert(FormattedFields::<HumanLayer>::new(
                     StyledSpanFields {
-                        style: Style::new(*attrs.metadata().level(), self.color_output),
+                        style: self.styles.for_metadata(attrs.metadata()),
+                        color: self.color_output,
                         fields,
                     }
                     .to_string(),
                 ));
 
             if self.span_events.clone() & FmtSpan::NEW != FmtSpan::NONE {
-                let mut human_event = self.event(*span_ref.metadata().level(), ctx.span_scope(id));
+                let mut human_event = self.event(span_ref.metadata(), ctx.span_scope(id));
                 human_event.fields.message = Some("new".into());
                 let _ = write!(self.output_writer.lock(), "{human_event}");
                 self.update_long(human_event.last_event_was_long);
@@ -168,7 +203,8 @@ where
                 .extensions_mut()
                 .insert(FormattedFields::<HumanLayer>::new(
                     StyledSpanFields {
-                        style: Style::new(*span_ref.metadata().level(), self.color_output),
+                        style: self.styles.for_metadata(span_ref.metadata()),
+                        color: self.color_output,
                         fields,
                     }
                     .to_string(),
@@ -177,7 +213,7 @@ where
     }
 
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
-        let mut human_event = self.event(*event.metadata().level(), ctx.event_scope(event));
+        let mut human_event = self.event(event.metadata(), ctx.event_scope(event));
         event.record(&mut human_event);
         let _ = write!(self.output_writer.lock(), "{human_event}");
         self.update_long(human_event.last_event_was_long);
