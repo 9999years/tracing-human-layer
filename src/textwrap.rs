@@ -23,27 +23,14 @@ pub fn options<'a>() -> Options<'a> {
 
 /// Extension trait adding methods to [`textwrap::Options`]
 pub trait TextWrapOptionsExt {
-    /// Subtract from the current `width`.
-    fn subtract_width(self, decrease: usize) -> Self;
-
     /// Set the `width` to wrap the text to.
     fn with_width(self, width: usize) -> Self;
 
     /// Wrap the given text into lines.
     fn wrap<'s>(&self, text: &'s str) -> Vec<Cow<'s, str>>;
-
-    /// Wrap the given text into lines and return a `String`.
-    ///
-    /// Like [`Self::wrap`] but with the lines pre-joined.
-    fn fill(&self, text: &str) -> String;
 }
 
 impl<'a> TextWrapOptionsExt for Options<'a> {
-    fn subtract_width(mut self, decrease: usize) -> Self {
-        self.width -= decrease;
-        self
-    }
-
     fn with_width(mut self, width: usize) -> Self {
         self.width = width;
         self
@@ -51,9 +38,5 @@ impl<'a> TextWrapOptionsExt for Options<'a> {
 
     fn wrap<'s>(&self, text: &'s str) -> Vec<Cow<'s, str>> {
         textwrap::wrap(text, self)
-    }
-
-    fn fill(&self, text: &str) -> String {
-        textwrap::fill(text, self)
     }
 }
