@@ -22,7 +22,7 @@ pub fn options<'a>() -> Options<'a> {
 }
 
 /// Extension trait adding methods to [`textwrap::Options`]
-pub trait TextWrapOptionsExt {
+pub(crate) trait TextWrapOptionsExt {
     /// Set the `width` to wrap the text to.
     fn with_width(self, width: usize) -> Self;
 
