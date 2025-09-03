@@ -10,6 +10,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::registry::Scope;
 
 use crate::textwrap::TextWrapOptionsExt;
+use crate::ShouldColor;
 use crate::SpanInfo;
 
 use super::HumanFields;
@@ -29,7 +30,7 @@ impl HumanEvent {
         level: Level,
         last_event_was_long: AtomicBool,
         scope: Option<Scope<'_, S>>,
-        color: bool,
+        color: ShouldColor,
     ) -> Self
     where
         S: tracing::Subscriber,
@@ -155,7 +156,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, true),
+                style: Style::new(Level::INFO, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -176,7 +177,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, true),
+                style: Style::new(Level::INFO, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -198,7 +199,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, true),
+                style: Style::new(Level::INFO, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -223,7 +224,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, true),
+                style: Style::new(Level::INFO, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -248,7 +249,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN, true),
+                style: Style::new(Level::WARN, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -291,7 +292,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN, true),
+                style: Style::new(Level::WARN, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -334,7 +335,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::TRACE, true),
+                style: Style::new(Level::TRACE, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Fine-grained tracing info".to_owned()),
@@ -353,7 +354,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::DEBUG, true),
+                style: Style::new(Level::DEBUG, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Debugging info".to_owned()),
@@ -372,7 +373,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN, true),
+                style: Style::new(Level::WARN, ShouldColor::Always),
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("I was unable to clone `mercury-web-backend`; most likely this is because you don't have a proper SSH key available.\n\

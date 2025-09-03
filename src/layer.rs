@@ -19,6 +19,7 @@ use tracing_subscriber::Layer;
 
 use crate::HumanEvent;
 use crate::HumanFields;
+use crate::ShouldColor;
 use crate::Style;
 use crate::StyledSpanFields;
 
@@ -36,7 +37,7 @@ pub struct HumanLayer<W = Stdout> {
     /// Which span events to emit.
     span_events: FmtSpan,
     /// Whether to color the output.
-    color_output: bool,
+    color_output: ShouldColor,
     /// The writer where output is written.
     output_writer: Mutex<W>,
 }
@@ -54,7 +55,7 @@ impl Default for HumanLayer {
         Self {
             last_event_was_long: Default::default(),
             span_events: FmtSpan::NONE,
-            color_output: true,
+            color_output: ShouldColor::Always,
             output_writer: Mutex::new(std::io::stdout()),
         }
     }
@@ -82,7 +83,12 @@ impl<W> HumanLayer<W> {
 
     /// Set the output coloring.
     pub fn with_color_output(mut self, color_output: bool) -> Self {
-        self.color_output = color_output;
+        // TODO: Should we expose `ShouldColor` and take it as a parameter here?
+        self.color_output = if color_output {
+            ShouldColor::Always
+        } else {
+            ShouldColor::Never
+        };
         self
     }
 
