@@ -3,6 +3,8 @@ use std::fmt::Display;
 use owo_colors::Style as OwoStyle;
 use tracing::Level;
 
+use crate::ShouldColor;
+
 use super::SpanInfo;
 
 #[derive(Debug)]
@@ -14,7 +16,7 @@ pub struct Style {
     pub subsequent_indent: &'static str,
 
     /// Should output be colored?
-    color: bool,
+    color: ShouldColor,
 
     /// Style for first-line indent text.
     indent: OwoStyle,
@@ -36,7 +38,7 @@ pub struct Style {
 }
 
 impl Style {
-    pub fn new(level: Level, color: bool) -> Self {
+    pub(crate) fn new(level: Level, color: ShouldColor) -> Self {
         let indent_text;
         let span_in = OwoStyle::new().dimmed();
         let mut indent = OwoStyle::new();
@@ -124,8 +126,12 @@ impl Style {
 }
 
 trait IntoConditionalColor: Display {
-    fn colored(&self, color: bool, style: OwoStyle) -> ConditionalColor<&Self> {
-        ConditionalColor::new(self).color(color).style(style)
+    fn colored(&self, color: ShouldColor, style: OwoStyle) -> ConditionalColor<&Self> {
+        ConditionalColor {
+            inner: self,
+            style,
+            color,
+        }
     }
 }
 
@@ -133,29 +139,9 @@ impl<T> IntoConditionalColor for T where T: Display {}
 
 /// Like `if_supports_color`, but I control it :)
 struct ConditionalColor<T> {
-    color: bool,
+    color: ShouldColor,
     style: OwoStyle,
     inner: T,
-}
-
-impl<T> ConditionalColor<T> {
-    pub fn new(inner: T) -> Self {
-        Self {
-            color: true,
-            style: OwoStyle::new(),
-            inner,
-        }
-    }
-
-    pub fn color(mut self, color: bool) -> Self {
-        self.color = color;
-        self
-    }
-
-    pub fn style(mut self, style: OwoStyle) -> Self {
-        self.style = style;
-        self
-    }
 }
 
 impl<T> Display for ConditionalColor<T>
@@ -163,10 +149,9 @@ where
     T: Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.color {
-            self.style.style(&self.inner).fmt(f)
-        } else {
-            self.inner.fmt(f)
+        match self.color {
+            ShouldColor::Always => self.style.style(&self.inner).fmt(f),
+            ShouldColor::Never => self.inner.fmt(f),
         }
     }
 }
