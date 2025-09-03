@@ -6,7 +6,7 @@ pub use layer::HumanLayer;
 pub use style::LayerStyles;
 pub use style::ProvideStyle;
 pub use style::Style;
-pub use textwrap::options as textwrap_options;
+pub use textwrap::TextWrapOptionsOwned;
 
 pub(crate) use color::ShouldColor;
 pub(crate) use event::HumanEvent;

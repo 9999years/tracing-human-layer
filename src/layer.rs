@@ -24,6 +24,7 @@ use crate::ProvideStyle;
 use crate::ShouldColor;
 use crate::SpanInfo;
 use crate::StyledSpanFields;
+use crate::TextWrapOptionsOwned;
 
 #[cfg(doc)]
 use crate::Style;
@@ -43,6 +44,8 @@ pub struct HumanLayer<W = Stderr, S = LayerStyles> {
     span_events: FmtSpan,
     /// Whether to color the output.
     color_output: ShouldColor,
+    /// Options for wrapping text, if any.
+    textwrap_options: Option<TextWrapOptionsOwned>,
     /// The writer where output is written.
     output_writer: Mutex<W>,
     /// Styles for writing events.
@@ -65,6 +68,7 @@ impl Default for HumanLayer {
             color_output: ShouldColor::Always,
             output_writer: Mutex::new(std::io::stderr()),
             styles: LayerStyles::new(),
+            textwrap_options: Some(TextWrapOptionsOwned::new()),
         }
     }
 }
@@ -87,7 +91,16 @@ impl<W, S> HumanLayer<W, S> {
             color_output: self.color_output,
             output_writer: Mutex::new(output_writer),
             styles: self.styles,
+            textwrap_options: self.textwrap_options,
         }
+    }
+
+    /// Set the [`textwrap::Options`].
+    ///
+    /// If `None`, no text wrapping is performed.
+    pub fn with_textwrap_options(mut self, textwrap_options: Option<TextWrapOptionsOwned>) -> Self {
+        self.textwrap_options = textwrap_options;
+        self
     }
 
     /// Set the output coloring.
@@ -116,6 +129,7 @@ impl<W, S> HumanLayer<W, S> {
             color_output: self.color_output,
             output_writer: self.output_writer,
             styles,
+            textwrap_options: self.textwrap_options,
         }
     }
 
@@ -148,6 +162,7 @@ where
                 .map(|scope| SpanInfo::from_scope(scope))
                 .unwrap_or_default(),
             fields: HumanFields::new_event(),
+            textwrap_options: self.textwrap_options.as_ref().map(|options| options.into()),
         }
     }
 

@@ -23,6 +23,7 @@ pub(crate) struct HumanEvent<'a> {
     /// [`AtomicBool`] from the [`crate::HumanLayer`].
     pub(crate) last_event_was_long: AtomicBool,
     pub(crate) style: Cow<'a, Style>,
+    pub(crate) textwrap_options: Option<textwrap::Options<'a>>,
     pub(crate) color: ShouldColor,
     /// Spans, in root-to-current (outside-in) order.
     pub(crate) spans: Vec<SpanInfo>,
@@ -44,15 +45,32 @@ impl<'a> Display for HumanEvent<'a> {
             .colored(self.color, self.style.initial_indent)
             .to_string();
 
-        let options = crate::textwrap_options()
-            .initial_indent(&indent_colored)
-            .subsequent_indent(&self.style.subsequent_indent_text);
+        let options = self.textwrap_options.as_ref().map(|options| {
+            options
+                .clone()
+                .initial_indent(&indent_colored)
+                .subsequent_indent(&self.style.subsequent_indent_text)
+        });
 
-        let mut message = self.fields.message.clone().unwrap_or_default();
+        let mut message = match &options {
+            Some(_) => self.fields.message.clone().unwrap_or_default(),
+            None => {
+                // If we're not wrapping, make sure we include the `initial_indent_text`!
+                let inner = self.fields.message.as_deref().unwrap_or_default();
+                let mut message =
+                    String::with_capacity(self.style.initial_indent_text.len() + inner.len());
+                message.push_str(&self.style.initial_indent_text);
+                message.push_str(inner);
+                message
+            }
+        };
 
         // If there's only one field, and it fits on the same line as the message, put it on the
         // same line. Otherwise, we use the 'long format' with each field on a separate line.
-        let short_format = self.fields.use_short_format(options.width);
+        let short_format = options
+            .as_ref()
+            .map(|options| self.fields.use_short_format(options.width))
+            .unwrap_or(true);
 
         if short_format {
             for (name, value) in &self.fields.fields {
@@ -127,6 +145,7 @@ impl<'a> Display for HumanEvent<'a> {
 mod tests {
     use crate::style::LayerStyles;
     use crate::ShouldColor;
+    use crate::TextWrapOptionsOwned;
 
     use super::*;
 
@@ -165,6 +184,7 @@ mod tests {
                     fields: Default::default(),
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
                 [32m• [0mChecking access to Mercury repositories on GitHub over SSH
@@ -189,6 +209,7 @@ mod tests {
                     )],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
                 [32m• [0mUser `nix.conf` is already OK [1mpath[0m=/Users/wiggles/.config/nix/nix.conf
@@ -215,6 +236,7 @@ mod tests {
                     )],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
                 [32m• [0mUser `nix.conf` is already OK
@@ -241,6 +263,7 @@ mod tests {
                     ],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
                 [32m• [0mUser `nix.conf` is already OK
@@ -278,6 +301,7 @@ mod tests {
                     fields: vec![],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
 
@@ -323,6 +347,7 @@ mod tests {
                     fields: vec![],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
 
@@ -354,6 +379,7 @@ mod tests {
                     fields: vec![("favorite_doggy_sound".to_owned(), "awooooooo".to_owned())],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
                 [35mTRACE [0m[2mFine-grained tracing info [1;2mfavorite_doggy_sound[0m[2m=awooooooo[0m[0m
@@ -375,6 +401,7 @@ mod tests {
                     fields: vec![("puppy".to_owned(), "pawbeans".to_owned())],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
                 [34mDEBUG [0m[2mDebugging info [1;2mpuppy[0m[2m=pawbeans[0m[0m
@@ -398,6 +425,7 @@ mod tests {
                     fields: vec![],
                 },
                 spans: vec![],
+                textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
 
