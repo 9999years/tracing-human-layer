@@ -1,27 +1,22 @@
 {
-  system,
+  pkgs,
+  pkgsStatic,
   lib,
   stdenv,
-  libiconv,
-  darwin,
   inputs,
   rustPlatform,
   rust-analyzer,
   cargo-release,
 }: let
   inherit (inputs) crane advisory-db;
-  craneLib = crane.lib.${system};
+  craneLib = crane.mkLib pkgs;
 
   commonArgs' = {
     src = craneLib.cleanCargoSource (craneLib.path ../../.);
 
     nativeBuildInputs = lib.optionals stdenv.isDarwin [
       # Additional darwin specific inputs can be set here
-      (libiconv.override {
-        enableStatic = true;
-        enableShared = false;
-      })
-      darwin.apple_sdk.frameworks.CoreServices
+      pkgsStatic.libiconv
     ];
   };
 
