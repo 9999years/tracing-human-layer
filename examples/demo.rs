@@ -1,4 +1,4 @@
-use clap::Parser;
+use pico_args::Arguments;
 use supports_color::Stream;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
@@ -6,26 +6,47 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 use tracing_human_layer::HumanLayer;
 
-#[derive(Parser)]
-struct Opts {
-    /// Use colored output.
-    #[arg(long)]
+const HELP: &str = "\
+tracing-human-layer demo
+
+See: https://github.com/9999years/tracing-human-layer
+
+Options:
+    --color    Force colored output
+    --stdout   Write output to stdout rather than stderr
+";
+
+struct Args {
     color: bool,
-    /// Write output to stdout.
-    #[arg(long)]
     stdout: bool,
 }
 
+impl Args {
+    fn from_env() -> Self {
+        let mut args = Arguments::from_env();
+
+        if args.contains(["-h", "--help"]) {
+            println!("{}", HELP);
+            std::process::exit(0);
+        }
+
+        Self {
+            color: args.contains("--color"),
+            stdout: args.contains("--stdout"),
+        }
+    }
+}
+
 fn main() {
-    let opts = Opts::parse();
+    let args = Args::from_env();
 
     let registry = tracing_subscriber::registry();
 
     let layer = HumanLayer::default()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_color_output(
-            opts.color
-                || supports_color::on(if opts.stdout {
+            args.color
+                || supports_color::on(if args.stdout {
                     Stream::Stdout
                 } else {
                     Stream::Stderr
@@ -34,7 +55,7 @@ fn main() {
                 .unwrap_or_default(),
         );
 
-    if opts.stdout {
+    if args.stdout {
         registry
             .with(layer.with_output_writer(std::io::stdout()))
             .init();

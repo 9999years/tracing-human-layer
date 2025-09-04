@@ -36,7 +36,7 @@ tracing-subscriber = "0.3"
 
 [dev-dependencies]
 test-harness = { path = "test-harness" }
-clap = { version = "4", features = ["derive"] }
+pico-args = "0.5"
 expect-test = "1"
 indoc = "2"
 supports-color = "3"
