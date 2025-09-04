@@ -1,14 +1,14 @@
+use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
+use std::fmt::Display;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 
 use tracing::field::Field;
 use tracing::field::Visit;
-use tracing::Level;
-use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::registry::Scope;
 
+use crate::style::IntoConditionalColor;
 use crate::textwrap::TextWrapOptionsExt;
 use crate::ShouldColor;
 use crate::SpanInfo;
@@ -17,50 +17,36 @@ use super::HumanFields;
 use super::Style;
 
 #[derive(Debug)]
-pub struct HumanEvent {
-    pub last_event_was_long: AtomicBool,
-    style: Style,
+pub(crate) struct HumanEvent<'a> {
+    /// We need to modify this in [`Display::fmt`], so it must be mutable through a `&self`
+    /// reference. We can either have a separate [`AtomicBool`] like this (no contention) or borrow the
+    /// [`AtomicBool`] from the [`crate::HumanLayer`].
+    pub(crate) last_event_was_long: AtomicBool,
+    pub(crate) style: Cow<'a, Style>,
+    pub(crate) color: ShouldColor,
     /// Spans, in root-to-current (outside-in) order.
-    spans: Vec<SpanInfo>,
-    pub fields: HumanFields,
+    pub(crate) spans: Vec<SpanInfo>,
+    pub(crate) fields: HumanFields,
 }
 
-impl HumanEvent {
-    pub fn new<S>(
-        level: Level,
-        last_event_was_long: AtomicBool,
-        scope: Option<Scope<'_, S>>,
-        color: ShouldColor,
-    ) -> Self
-    where
-        S: tracing::Subscriber,
-        S: for<'lookup> LookupSpan<'lookup>,
-    {
-        Self {
-            last_event_was_long,
-            style: Style::new(level, color),
-            fields: HumanFields::new_event(),
-            spans: scope
-                .map(|scope| SpanInfo::from_scope(scope))
-                .unwrap_or_default(),
-        }
-    }
-}
-
-impl Visit for HumanEvent {
+impl<'a> Visit for HumanEvent<'a> {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
         self.fields
             .record_field(field.name().to_owned(), format!("{value:?}"))
     }
 }
 
-impl fmt::Display for HumanEvent {
+impl<'a> Display for HumanEvent<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let indent_colored = self.style.indent_colored();
+        let indent_colored = self
+            .style
+            .initial_indent_text
+            .colored(self.color, self.style.initial_indent)
+            .to_string();
 
         let options = crate::textwrap_options()
             .initial_indent(&indent_colored)
-            .subsequent_indent(self.style.subsequent_indent);
+            .subsequent_indent(&self.style.subsequent_indent_text);
 
         let mut message = self.fields.message.clone().unwrap_or_default();
 
@@ -70,14 +56,20 @@ impl fmt::Display for HumanEvent {
 
         if short_format {
             for (name, value) in &self.fields.fields {
-                message.push_str(&format!(" {}", self.style.style_field(name, value)));
+                message.push_str(&format!(
+                    " {}",
+                    self.style.style_field(self.color, name, value)
+                ));
             }
         }
 
         // Next, color the message _before_ wrapping it. If you wrap before coloring,
         // `textwrap` prepends the `initial_indent` to the first line. The `initial_indent` is
         // colored, so it has a reset sequence at the end, and the message ends up uncolored.
-        let message_colored = self.style.style_message(&message);
+        let message_colored = message
+            .as_str()
+            .colored(self.color, self.style.message)
+            .to_string();
 
         let lines = options.wrap(&message_colored);
 
@@ -103,8 +95,8 @@ impl fmt::Display for HumanEvent {
                 writeln!(
                     f,
                     "{}{}",
-                    self.style.subsequent_indent,
-                    self.style.style_field(name, value)
+                    self.style.subsequent_indent_text,
+                    self.style.style_field(self.color, name, value)
                 )?;
             }
         }
@@ -114,9 +106,11 @@ impl fmt::Display for HumanEvent {
         for span in self.spans.iter().rev() {
             writeln!(
                 f,
-                "{}{}",
-                self.style.subsequent_indent,
-                self.style.style_span(span),
+                "{indent}{in_}{name}{fields}",
+                indent = self.style.subsequent_indent_text,
+                in_ = "in ".colored(self.color, self.style.span_in),
+                name = span.name.colored(self.color, self.style.span_name),
+                fields = span.fields,
             )?;
         }
 
@@ -131,11 +125,15 @@ impl fmt::Display for HumanEvent {
 
 #[cfg(test)]
 mod tests {
+    use crate::style::LayerStyles;
+    use crate::ShouldColor;
+
     use super::*;
 
     use expect_test::expect;
     use expect_test::Expect;
     use indoc::indoc;
+    use tracing::Level;
 
     // /!\   /!\   /!\   /!\   /!\   /!\   /!\   /!\
     //
@@ -153,10 +151,12 @@ mod tests {
 
     #[test]
     fn test_simple() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, ShouldColor::Always),
+                style: styles.for_level(Level::INFO),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -174,10 +174,12 @@ mod tests {
 
     #[test]
     fn test_short_format() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, ShouldColor::Always),
+                style: styles.for_level(Level::INFO),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -196,10 +198,12 @@ mod tests {
 
     #[test]
     fn test_short_format_long_field() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, ShouldColor::Always),
+                style: styles.for_level(Level::INFO),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -221,10 +225,12 @@ mod tests {
 
     #[test]
     fn test_long_format() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::INFO, ShouldColor::Always),
+                style: styles.for_level(Level::INFO),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
@@ -246,10 +252,12 @@ mod tests {
 
     #[test]
     fn test_long_warning() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN, ShouldColor::Always),
+                style: styles.for_level(Level::WARN),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -289,10 +297,12 @@ mod tests {
 
     #[test]
     fn test_long_warning_last_was_long() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN, ShouldColor::Always),
+                style: styles.for_level(Level::WARN),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some(
@@ -332,10 +342,12 @@ mod tests {
 
     #[test]
     fn test_trace() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::TRACE, ShouldColor::Always),
+                style: styles.for_level(Level::TRACE),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Fine-grained tracing info".to_owned()),
@@ -351,10 +363,12 @@ mod tests {
 
     #[test]
     fn test_debug() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::DEBUG, ShouldColor::Always),
+                style: styles.for_level(Level::DEBUG),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Debugging info".to_owned()),
@@ -370,10 +384,12 @@ mod tests {
 
     #[test]
     fn test_wrapping() {
+        let styles = LayerStyles::new();
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
-                style: Style::new(Level::WARN, ShouldColor::Always),
+                style: styles.for_level(Level::WARN),
+                color: ShouldColor::Always,
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("I was unable to clone `mercury-web-backend`; most likely this is because you don't have a proper SSH key available.\n\

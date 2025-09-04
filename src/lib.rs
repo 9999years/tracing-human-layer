@@ -1,4 +1,10 @@
+//! A human-friendly and colorful terminal output [`tracing_subscriber::Layer`] for [`tracing`].
+
+#![deny(missing_docs)]
+
 pub use layer::HumanLayer;
+pub use style::LayerStyles;
+pub use style::ProvideStyle;
 pub use style::Style;
 pub use textwrap::options as textwrap_options;
 
