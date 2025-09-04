@@ -11,9 +11,9 @@ struct Opts {
     /// Use colored output.
     #[arg(long)]
     color: bool,
-    /// Write output to stderr.
+    /// Write output to stdout.
     #[arg(long)]
-    stderr: bool,
+    stdout: bool,
 }
 
 fn main() {
@@ -25,18 +25,18 @@ fn main() {
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_color_output(
             opts.color
-                || supports_color::on(if opts.stderr {
-                    Stream::Stderr
-                } else {
+                || supports_color::on(if opts.stdout {
                     Stream::Stdout
+                } else {
+                    Stream::Stderr
                 })
                 .map(|level| level.has_basic)
                 .unwrap_or_default(),
         );
 
-    if opts.stderr {
+    if opts.stdout {
         registry
-            .with(layer.with_output_writer(std::io::stderr()))
+            .with(layer.with_output_writer(std::io::stdout()))
             .init();
     } else {
         registry.with(layer).init();

@@ -5,7 +5,7 @@ use test_harness::Example;
 fn test_basic_output() {
     let output = Example::name("demo").output().unwrap();
 
-    let stdout = expect![[r#"
+    let stderr = expect![[r#"
         TRACE Trace event.
         DEBUG Debug event.
         • Info event. field="field-value"
@@ -76,8 +76,8 @@ fn test_basic_output() {
         • close
           in my-span{path="my/cool/path.txt"}
     "#]];
-    stdout.assert_eq(&output.stdout);
-
-    let stderr = expect![[""]];
     stderr.assert_eq(&output.stderr);
+
+    let stdout = expect![[""]];
+    stdout.assert_eq(&output.stdout);
 }

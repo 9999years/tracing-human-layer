@@ -5,7 +5,7 @@ use test_harness::Example;
 fn test_color() {
     let output = Example::name("demo").arg("--color").output().unwrap();
 
-    let stdout = expect![[r#"
+    let stderr = expect![[r#"
         [35mTRACE [0m[2mTrace event.[0m
         [34mDEBUG [0m[2mDebug event.[0m
         [32m• [0mInfo event. [1mfield[0m="field-value"
@@ -76,8 +76,8 @@ fn test_color() {
         [32m• [0mclose
           [2min [0mmy-span{[1mpath[0m="my/cool/path.txt"}
     "#]];
-    stdout.assert_eq(&output.stdout);
-
-    let stderr = expect![[""]];
     stderr.assert_eq(&output.stderr);
+
+    let stdout = expect![[""]];
+    stdout.assert_eq(&output.stdout);
 }
