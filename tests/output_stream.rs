@@ -2,13 +2,13 @@ use expect_test::expect;
 use test_harness::Example;
 
 #[test]
-fn test_output_stream_stderr() {
-    let output = Example::name("demo").arg("--stderr").output().unwrap();
+fn test_output_stream_stdout() {
+    let output = Example::name("demo").arg("--stdout").output().unwrap();
 
-    let stdout = expect![""];
-    stdout.assert_eq(&output.stdout);
+    let stderr = expect![""];
+    stderr.assert_eq(&output.stderr);
 
-    let stderr = expect![[r#"
+    let stdout = expect![[r#"
         TRACE Trace event.
         DEBUG Debug event.
         • Info event. field="field-value"
@@ -79,5 +79,5 @@ fn test_output_stream_stderr() {
         • close
           in my-span{path="my/cool/path.txt"}
     "#]];
-    stderr.assert_eq(&output.stderr);
+    stdout.assert_eq(&output.stdout);
 }

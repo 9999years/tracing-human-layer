@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use std::io::Stdout;
+use std::io::Stderr;
 use std::io::Write;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -24,7 +24,7 @@ use crate::Style;
 use crate::StyledSpanFields;
 
 /// A human-friendly [`tracing_subscriber::Layer`].
-pub struct HumanLayer<W = Stdout> {
+pub struct HumanLayer<W = Stderr> {
     /// We print blank lines before and after long log messages to help visually separate them.
     ///
     /// This becomes an issue if two long log messages are printed one after another.
@@ -56,13 +56,13 @@ impl Default for HumanLayer {
             last_event_was_long: Default::default(),
             span_events: FmtSpan::NONE,
             color_output: ShouldColor::Always,
-            output_writer: Mutex::new(std::io::stdout()),
+            output_writer: Mutex::new(std::io::stderr()),
         }
     }
 }
 
 impl HumanLayer {
-    /// Construct a new [`HumanLayer`] that writes to [`Stdout`].
+    /// Construct a new [`HumanLayer`] that writes to [`Stderr`].
     pub fn new() -> Self {
         Self::default()
     }
