@@ -65,6 +65,7 @@ jobs:
         os: [ubuntu-latest]
     steps:
       - name: Checkout code
+        uses: actions/checkout@v5
 
       - name: Build documentation
         run: |
@@ -73,12 +74,11 @@ jobs:
           cp "$RESULT"/* target/
 
       - name: Upload documentation
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: documentation
           path: |
             target/*
-        uses: actions/checkout@v5
 
       - uses: cachix/install-nix-action@v31
 
@@ -120,7 +120,7 @@ jobs:
         #         path: target/release/ghciwatch-aarch64-linux
         #
         # will be downloaded to `linux/ghciwatch-aarch64-linux`.
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v5
 
       - name: Create release
         id: create_release
