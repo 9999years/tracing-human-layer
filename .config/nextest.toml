@@ -1,0 +1,4 @@
+# https://nexte.st/book/configuration.html
+
+[profile.default]
+slow-timeout = { period = "30s", terminate-after = 4 }
