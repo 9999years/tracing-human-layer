@@ -6,7 +6,6 @@
     systems.url = "github:nix-systems/default";
     crane = {
       url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     advisory-db = {
       url = "github:rustsec/advisory-db";
