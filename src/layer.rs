@@ -55,7 +55,13 @@ pub struct HumanLayer<W = Stderr, S = LayerStyles> {
 impl<W, S> Debug for HumanLayer<W, S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HumanLayer")
+            .field("span_events", &self.span_events)
             .field("color_output", &self.color_output)
+            .field("textwrap_options", &self.textwrap_options)
+            // These strings get debug-formatted, which is a bit ugly, but it's fine.
+            // See: https://github.com/rust-lang/rust/issues/117729
+            .field("output_writer", &std::any::type_name::<W>())
+            .field("styles", &std::any::type_name::<S>())
             .finish_non_exhaustive()
     }
 }
@@ -259,5 +265,45 @@ where
             let _ = write!(self.output_writer.lock(), "{human_event}");
             self.update_long(human_event.last_event_was_long);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use expect_test::expect;
+
+    use super::*;
+
+    #[test]
+    fn test_debug() {
+        expect![[r#"
+            HumanLayer {
+                span_events: FmtSpan::NONE,
+                color_output: Always,
+                textwrap_options: Some(
+                    TextWrapOptionsOwned {
+                        width: Fixed(
+                            80,
+                        ),
+                        line_ending: LF,
+                        break_words: false,
+                        wrap_algorithm: OptimalFit(
+                            Penalties {
+                                nline_penalty: 1000,
+                                overflow_penalty: 2500,
+                                short_last_line_fraction: 4,
+                                short_last_line_penalty: 25,
+                                hyphen_penalty: 25,
+                            },
+                        ),
+                        word_separator: AsciiSpace,
+                        word_splitter: NoHyphenation,
+                    },
+                ),
+                output_writer: "std::io::stdio::Stderr",
+                styles: "tracing_human_layer::style::LayerStyles",
+                ..
+            }"#]]
+        .assert_eq(&format!("{:#?}", HumanLayer::new()));
     }
 }
