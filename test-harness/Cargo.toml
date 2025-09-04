@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 expect-test = "*"
 escargot = "0.5"
-miette = "7"
+command-error = "0.6"
+utf8-command = "1"

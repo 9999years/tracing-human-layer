@@ -1,14 +1,45 @@
 use std::borrow::Cow;
+use std::fmt::Display;
 use std::path::PathBuf;
 use std::process::Command;
-use std::process::ExitStatus;
-use std::process::Output;
-use std::process::Stdio;
 
+use command_error::CommandExt;
+use escargot::error::CargoError;
 use escargot::format::Message;
-use miette::miette;
-use miette::Context;
-use miette::IntoDiagnostic;
+use utf8_command::Utf8Output;
+
+pub type Result<T> = std::result::Result<T, TestError>;
+
+#[derive(Debug)]
+pub enum TestError {
+    Cargo { example: String, inner: CargoError },
+    ExecutableNotFound { example: String },
+    ExecutableNotBuilt { example: String },
+    Command(command_error::Error),
+}
+
+impl From<command_error::Error> for TestError {
+    fn from(value: command_error::Error) -> Self {
+        Self::Command(value)
+    }
+}
+
+impl Display for TestError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TestError::Cargo { example, inner } => {
+                write!(f, "Failed to build example {example:?}: {inner}")
+            }
+            TestError::ExecutableNotFound { example } => {
+                write!(f, "Example {example:?} has no binary")
+            }
+            TestError::ExecutableNotBuilt { example } => write!(f, "Example {example:?} not built"),
+            TestError::Command(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for TestError {}
 
 pub struct Example {
     name: String,
@@ -24,15 +55,26 @@ impl Example {
     }
 
     /// Get the path of the example binary.
-    fn executable(&self) -> miette::Result<PathBuf> {
+    fn executable(&self) -> Result<PathBuf> {
         let messages = escargot::CargoBuild::new()
             .example(&self.name)
             .exec()
-            .into_diagnostic()
-            .wrap_err_with(|| format!("Failed to build example binary `{}`", self.name))?;
+            .map_err(|inner| TestError::Cargo {
+                example: self.name.clone(),
+                inner,
+            })?;
+
         for message in messages {
-            if let Message::CompilerArtifact(artifact) =
-                message.into_diagnostic()?.decode().into_diagnostic()?
+            if let Message::CompilerArtifact(artifact) = message
+                .map_err(|inner| TestError::Cargo {
+                    example: self.name.clone(),
+                    inner,
+                })?
+                .decode()
+                .map_err(|inner| TestError::Cargo {
+                    example: self.name.clone(),
+                    inner,
+                })?
             {
                 if artifact.target.name != self.name
                     || !artifact.target.kind.contains(&Cow::Borrowed("example"))
@@ -41,11 +83,16 @@ impl Example {
                 }
                 return Ok(artifact
                     .executable
-                    .ok_or_else(|| miette!("Example `{}` has no binary", self.name))?
+                    .ok_or_else(|| TestError::ExecutableNotFound {
+                        example: self.name.clone(),
+                    })?
                     .into_owned());
             }
         }
-        Err(miette!("No example output binary found"))
+
+        Err(TestError::ExecutableNotBuilt {
+            example: self.name.clone(),
+        })
     }
 
     pub fn arg(&mut self, arg: impl AsRef<str>) -> &mut Self {
@@ -59,55 +106,11 @@ impl Example {
         self
     }
 
-    pub fn output(&self) -> miette::Result<Utf8Output> {
-        let executable = self.executable().wrap_err_with(|| {
-            format!("Failed to get executable path for example `{}`", self.name)
-        })?;
+    pub fn output(&self) -> Result<Utf8Output> {
+        let executable = self.executable()?;
 
-        let output = Command::new(executable)
+        Ok(Command::new(executable)
             .args(&self.args)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .into_diagnostic()
-            .wrap_err_with(|| format!("Failed to execute example `{}`", self.name))?;
-
-        if output.status.success() {
-            output.try_into()
-        } else {
-            Err(miette!("Example `{}` failed: {}", self.name, output.status))
-        }
-    }
-}
-
-/// Like [`std::process::Output`] but UTF-8 decoded.
-pub struct Utf8Output {
-    pub status: ExitStatus,
-    pub stdout: String,
-    pub stderr: String,
-}
-
-impl TryFrom<Output> for Utf8Output {
-    type Error = miette::Report;
-
-    fn try_from(output: Output) -> Result<Self, Self::Error> {
-        let stdout = String::from_utf8(output.stdout).map_err(|err| {
-            miette!(
-                "Command wrote invalid stdout: {err}: {}",
-                String::from_utf8_lossy(err.as_bytes())
-            )
-        })?;
-        let stderr = String::from_utf8(output.stderr).map_err(|err| {
-            miette!(
-                "Command wrote invalid stderr: {err}: {}",
-                String::from_utf8_lossy(err.as_bytes())
-            )
-        })?;
-
-        Ok(Self {
-            status: output.status,
-            stdout,
-            stderr,
-        })
+            .output_checked_utf8()?)
     }
 }
