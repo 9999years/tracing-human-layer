@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::io::LineWriter;
 use std::io::Stderr;
 use std::io::Write;
 use std::sync::atomic::AtomicBool;
@@ -30,7 +31,7 @@ use crate::TextWrapOptionsOwned;
 use crate::Style;
 
 /// A human-friendly [`tracing_subscriber::Layer`].
-pub struct HumanLayer<W = Stderr, S = LayerStyles> {
+pub struct HumanLayer<W = LineWriter<Stderr>, S = LayerStyles> {
     /// We print blank lines before and after long log messages to help visually separate them.
     ///
     /// This becomes an issue if two long log messages are printed one after another.
@@ -72,7 +73,7 @@ impl Default for HumanLayer {
             last_event_was_long: Default::default(),
             span_events: FmtSpan::NONE,
             color_output: ShouldColor::Always,
-            output_writer: Mutex::new(std::io::stderr()),
+            output_writer: Mutex::new(LineWriter::new(std::io::stderr())),
             styles: LayerStyles::new(),
             textwrap_options: Some(TextWrapOptionsOwned::new()),
         }
@@ -304,7 +305,7 @@ mod tests {
                         word_splitter: NoHyphenation,
                     },
                 ),
-                output_writer: "std::io::stdio::Stderr",
+                output_writer: "std::io::buffered::linewriter::LineWriter<std::io::stdio::Stderr>",
                 styles: "tracing_human_layer::style::LayerStyles",
                 ..
             }"#]]
