@@ -40,3 +40,8 @@ pico-args = "0.5"
 expect-test = "1"
 indoc = "2"
 supports-color = "3"
+criterion = "0.3"
+
+[[bench]]
+name = "format_event"
+harness = false
