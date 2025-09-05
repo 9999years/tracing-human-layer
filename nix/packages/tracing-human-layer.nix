@@ -7,7 +7,6 @@
   rustPlatform,
   rust-analyzer,
   cargo-release,
-  cargo-criterion,
 }: let
   inherit (inputs) crane advisory-db;
   craneLib = crane.mkLib pkgs;
@@ -62,7 +61,6 @@
     packages = [
       rust-analyzer
       cargo-release
-      cargo-criterion
     ];
   };
 in
