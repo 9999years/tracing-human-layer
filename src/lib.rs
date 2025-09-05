@@ -5,13 +5,13 @@
 //! TL;DR: Logging performance is dominated by the cost of writing to stderr.
 //!
 //! I haven't done too much performance work on `tracing-human-layer`, but I do have a couple
-//! benchmarks. It seems to take 1.5-4µs to format an event (including emitting a span and event),
+//! benchmarks. It seems to take 2-6µs to format an event (including emitting a span and event),
 //! with the exact cost depending on whether or not color output
 //! ([`HumanLayer::with_color_output`]) or text wrapping ([`HumanLayer::with_textwrap_options`])
 //! is enabled.
 //!
-//! Formatting an event _and writing it to stderr_ takes 25µs, so actually showing the logs to the
-//! user is about 6.5× slower than just formatting them.
+//! Formatting an event _and writing it to stderr_ takes 20µs, so actually showing the logs to the
+//! user is about 3.5× slower than just formatting them.
 
 #![deny(missing_docs)]
 

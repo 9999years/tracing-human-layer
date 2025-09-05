@@ -19,7 +19,7 @@ fn emit_span_and_event() {
         event_field = "event_field_value",
         kind = "silly",
         puppy = "doggy",
-        "inspecting pawbs and other stuff and other stuff and other stuff"
+        "inspecting pawbs and other stuff and other stuff and other stuff and this and that and the other thing"
     );
 }
 
