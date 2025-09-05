@@ -188,14 +188,15 @@ where
     }
 }
 
-impl<S, W> Layer<S> for HumanLayer<W>
+impl<Sub, Wr, Sty> Layer<Sub> for HumanLayer<Wr, Sty>
 where
-    S: Subscriber,
-    S: for<'lookup> LookupSpan<'lookup>,
+    Sub: Subscriber,
+    Sub: for<'lookup> LookupSpan<'lookup>,
     Self: 'static,
-    W: Write,
+    Wr: Write,
+    Sty: ProvideStyle,
 {
-    fn on_new_span(&self, attrs: &span::Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
+    fn on_new_span(&self, attrs: &span::Attributes<'_>, id: &Id, ctx: Context<'_, Sub>) {
         let mut fields = HumanFields::new_span();
         attrs.record(&mut fields);
         if let Some(span_ref) = ctx.span(id) {
@@ -219,7 +220,7 @@ where
         }
     }
 
-    fn on_record(&self, id: &Id, values: &span::Record<'_>, ctx: Context<'_, S>) {
+    fn on_record(&self, id: &Id, values: &span::Record<'_>, ctx: Context<'_, Sub>) {
         let mut fields = HumanFields::new_span();
         values.record(&mut fields);
         if let Some(span_ref) = ctx.span(id) {
@@ -236,14 +237,14 @@ where
         }
     }
 
-    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
+    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, Sub>) {
         let mut human_event = self.event(event.metadata(), ctx.event_scope(event));
         event.record(&mut human_event);
         let _ = write!(self.output_writer.lock(), "{human_event}");
         self.update_long(human_event.last_event_was_long);
     }
 
-    fn on_enter(&self, id: &Id, ctx: Context<'_, S>) {
+    fn on_enter(&self, id: &Id, ctx: Context<'_, Sub>) {
         if self.span_events.clone() & FmtSpan::ENTER != FmtSpan::NONE {
             let mut human_event = self.event_for_id(id, ctx);
             human_event.fields.message = Some("enter".into());
@@ -252,7 +253,7 @@ where
         }
     }
 
-    fn on_exit(&self, id: &Id, ctx: Context<'_, S>) {
+    fn on_exit(&self, id: &Id, ctx: Context<'_, Sub>) {
         if self.span_events.clone() & FmtSpan::EXIT != FmtSpan::NONE {
             let mut human_event = self.event_for_id(id, ctx);
             human_event.fields.message = Some("exit".into());
@@ -261,7 +262,7 @@ where
         }
     }
 
-    fn on_close(&self, id: Id, ctx: Context<'_, S>) {
+    fn on_close(&self, id: Id, ctx: Context<'_, Sub>) {
         if self.span_events.clone() & FmtSpan::CLOSE != FmtSpan::NONE {
             let mut human_event = self.event_for_id(&id, ctx);
             human_event.fields.message = Some("close".into());
