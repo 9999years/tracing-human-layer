@@ -90,6 +90,9 @@ impl<W, S> HumanLayer<W, S> {
     /// Set the writer that log messages are written to.
     ///
     /// This does not change colored output by default.
+    ///
+    /// The `output_writer` should implement [`std::io::Write`] for the [`HumanLayer`] to
+    /// implement [`tracing_subscriber::Layer`].
     pub fn with_output_writer<W2>(self, output_writer: W2) -> HumanLayer<W2, S> {
         HumanLayer {
             last_event_was_long: self.last_event_was_long,
