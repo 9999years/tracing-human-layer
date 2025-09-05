@@ -9,7 +9,7 @@ use tracing::field::Visit;
 pub struct HumanFields {
     pub extract_message: bool,
     pub message: Option<String>,
-    pub fields: Vec<(String, String)>,
+    pub fields: Vec<(&'static str, String)>,
 }
 
 impl HumanFields {
@@ -40,7 +40,7 @@ impl HumanFields {
             .chain(
                 self.fields
                     .iter()
-                    .map(|(name, value)| (name.as_str(), value.as_str())),
+                    .map(|(name, value)| (*name, value.as_str())),
             )
     }
 
@@ -53,7 +53,7 @@ impl HumanFields {
                     .saturating_sub(self.message.as_ref().map_or(0, |message| message.len()))
     }
 
-    pub fn record_field(&mut self, field_name: String, value: String) {
+    pub fn record_field(&mut self, field_name: &'static str, value: String) {
         if self.extract_message && field_name == "message" {
             self.message = Some(value);
         } else {
@@ -64,6 +64,6 @@ impl HumanFields {
 
 impl Visit for HumanFields {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        self.record_field(field.name().to_owned(), format!("{value:?}"))
+        self.record_field(field.name(), format!("{value:?}"))
     }
 }

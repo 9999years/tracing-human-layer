@@ -32,8 +32,7 @@ pub(crate) struct HumanEvent<'a> {
 
 impl<'a> Visit for HumanEvent<'a> {
     fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-        self.fields
-            .record_field(field.name().to_owned(), format!("{value:?}"))
+        self.fields.record_field(field.name(), format!("{value:?}"))
     }
 }
 
@@ -203,10 +202,7 @@ mod tests {
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
-                    fields: vec![(
-                        "path".to_owned(),
-                        "/Users/wiggles/.config/nix/nix.conf".to_owned(),
-                    )],
+                    fields: vec![("path", "/Users/wiggles/.config/nix/nix.conf".to_owned())],
                 },
                 spans: vec![],
                 textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
@@ -229,7 +225,7 @@ mod tests {
                     extract_message: true,
                     message: Some("User `nix.conf` is already OK".to_owned()),
                     fields: vec![(
-                        "path".to_owned(),
+                        "path",
                         // this field is too long to fit on one line, so we use the long format
                         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                             .to_owned(),
@@ -258,8 +254,8 @@ mod tests {
                     message: Some("User `nix.conf` is already OK".to_owned()),
                     // Multiple fields means we use the long format.
                     fields: vec![
-                        ("path".to_owned(), "~/.config/nix/nix.conf".to_owned()),
-                        ("user".to_owned(), "puppy".to_owned()),
+                        ("path", "~/.config/nix/nix.conf".to_owned()),
+                        ("user", "puppy".to_owned()),
                     ],
                 },
                 spans: vec![],
@@ -376,7 +372,7 @@ mod tests {
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Fine-grained tracing info".to_owned()),
-                    fields: vec![("favorite_doggy_sound".to_owned(), "awooooooo".to_owned())],
+                    fields: vec![("favorite_doggy_sound", "awooooooo".to_owned())],
                 },
                 spans: vec![],
                 textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
@@ -398,7 +394,7 @@ mod tests {
                 fields: HumanFields {
                     extract_message: true,
                     message: Some("Debugging info".to_owned()),
-                    fields: vec![("puppy".to_owned(), "pawbeans".to_owned())],
+                    fields: vec![("puppy", "pawbeans".to_owned())],
                 },
                 spans: vec![],
                 textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
