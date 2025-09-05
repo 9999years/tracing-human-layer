@@ -133,12 +133,19 @@ pub struct Style {
 }
 
 impl Style {
-    pub(crate) fn style_field(&self, color: ShouldColor, name: &str, value: &str) -> String {
-        format!(
-            "{name}{value}",
-            name = name.colored(color, self.field_name),
-            value = format!("={value}").colored(color, self.field_value),
-        )
+    pub(crate) fn style_field<'a>(
+        &'a self,
+        color: ShouldColor,
+        name: &'a str,
+        value: &'a str,
+    ) -> StyledField<'a> {
+        StyledField {
+            color,
+            name,
+            name_style: self.field_name,
+            value,
+            value_style: self.field_value,
+        }
     }
 
     /// First-line indent text.
@@ -223,5 +230,22 @@ where
             ShouldColor::Always => self.style.style(&self.inner).fmt(f),
             ShouldColor::Never => self.inner.fmt(f),
         }
+    }
+}
+
+pub(crate) struct StyledField<'a> {
+    color: ShouldColor,
+    name: &'a str,
+    name_style: OwoStyle,
+    value: &'a str,
+    value_style: OwoStyle,
+}
+
+impl Display for StyledField<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name.colored(self.color, self.name_style))?;
+        write!(f, "{}", '='.colored(self.color, self.value_style))?;
+        write!(f, "{}", self.value.colored(self.color, self.value_style))?;
+        Ok(())
     }
 }

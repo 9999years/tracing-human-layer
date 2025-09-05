@@ -378,7 +378,7 @@ mod tests {
                 textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
-                [35mTRACE [0m[2mFine-grained tracing info [1;2mfavorite_doggy_sound[0m[2m=awooooooo[0m[0m
+                [35mTRACE [0m[2mFine-grained tracing info [1;2mfavorite_doggy_sound[0m[2m=[0m[2mawooooooo[0m[0m
             "#]],
         );
     }
@@ -400,7 +400,7 @@ mod tests {
                 textwrap_options: Some((&TextWrapOptionsOwned::new()).into()),
             },
             expect![[r#"
-                [34mDEBUG [0m[2mDebugging info [1;2mpuppy[0m[2m=pawbeans[0m[0m
+                [34mDEBUG [0m[2mDebugging info [1;2mpuppy[0m[2m=[0m[2mpawbeans[0m[0m
             "#]],
         );
     }
