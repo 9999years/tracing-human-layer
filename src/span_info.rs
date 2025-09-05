@@ -8,9 +8,6 @@ use crate::HumanLayer;
 pub struct SpanInfo {
     /// The span's name.
     pub name: &'static str,
-    /// The span's target (typically the module name).
-    #[allow(dead_code)]
-    target: String,
     /// The span's fields, formatted.
     pub fields: String,
 }
@@ -35,7 +32,6 @@ impl SpanInfo {
                 .fields;
             spans.push(SpanInfo {
                 name: span.name(),
-                target: span.metadata().target().into(),
                 fields: fields.to_owned(),
             });
         }
