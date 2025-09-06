@@ -1,18 +1,9 @@
-//! A human-friendly and colorful terminal output [`tracing_subscriber::Layer`] for [`tracing`].
-//!
-//! ## Performance
-//!
-//! TL;DR: Half of the cost of logging is writing to stderr.
-//!
-//! I haven't done too much performance work on `tracing-human-layer`, but I do have a couple
-//! benchmarks. It seems to take 1.92-6.17µs to format an event (including emitting a span and event),
-//! with the exact cost depending on whether or not color output
-//! ([`HumanLayer::with_color_output`]) or text wrapping ([`HumanLayer::with_textwrap_options`])
-//! is enabled.
-//!
-//! Formatting an event _and writing it to stderr_ takes 12.55µs, so actually showing the logs to the
-//! user is about 2× slower than just formatting them.
-
+//! [tracing_subscriber::Layer]: tracing_subscriber::Layer
+//! [tracing]: tracing
+//! [textwrap-options]: HumanLayer::with_textwrap_options
+//! [styles]: HumanLayer::with_style_provider
+//! [disable-color]: HumanLayer::with_color_output
+#![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 
 pub use layer::HumanLayer;
