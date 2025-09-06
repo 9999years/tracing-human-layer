@@ -1,0 +1,21 @@
+# Lots of files don't have a formatter, so don't spam warnings.
+on-unmatched = "debug"
+
+[formatter.nixfmt]
+command = "nixfmt"
+includes = ["*.nix"]
+
+[formatter.rustfmt]
+command = "cargo"
+options = [
+    "fmt",
+    "--",
+]
+includes = ["*.rs"]
+
+[formatter.actionlint]
+command = "actionlint"
+includes = [
+    ".github/actions/*.yml",
+    ".github/actions/*.yaml",
+]

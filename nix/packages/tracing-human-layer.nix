@@ -7,20 +7,24 @@
   rustPlatform,
   rust-analyzer,
   cargo-release,
-}: let
+  checks,
+}:
+let
   inherit (inputs) crane advisory-db;
   craneLib = crane.mkLib pkgs;
 
   commonArgs' = {
     src =
-      let root = ../../.;
-      in lib.fileset.toSource {
+      let
+        root = ../../.;
+      in
+      lib.fileset.toSource {
         inherit root;
         fileset = lib.fileset.unions [
           (craneLib.fileset.commonCargoSources root)
-            (lib.fileset.fileFilter (file: file.hasExt "md") root)
-            (root + "/README.md")
-            (root + "/screenshot.png")
+          (lib.fileset.fileFilter (file: file.hasExt "md") root)
+          (root + "/README.md")
+          (root + "/screenshot.png")
         ];
       };
 
@@ -34,35 +38,42 @@
   # all of that work (e.g. via cachix) when running in CI
   cargoArtifacts = craneLib.buildDepsOnly commonArgs';
 
-  commonArgs =
-    commonArgs'
-    // {
-      inherit cargoArtifacts;
-    };
+  commonArgs = commonArgs' // {
+    inherit cargoArtifacts;
+  };
 
-  checks = {
-    tracing-human-layer-tests = craneLib.cargoNextest (commonArgs
+  checks' = {
+    tracing-human-layer-tests = craneLib.cargoNextest (
+      commonArgs
       // {
         NEXTEST_HIDE_PROGRESS_BAR = "true";
-      });
-    tracing-human-layer-clippy = craneLib.cargoClippy (commonArgs
+      }
+    );
+    tracing-human-layer-clippy = craneLib.cargoClippy (
+      commonArgs
       // {
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-      });
-    tracing-human-layer-rustdoc = craneLib.cargoDoc (commonArgs
+      }
+    );
+    tracing-human-layer-rustdoc = craneLib.cargoDoc (
+      commonArgs
       // {
         cargoDocExtraArgs = "--document-private-items";
         RUSTDOCFLAGS = "-D warnings";
-      });
+      }
+    );
     tracing-human-layer-fmt = craneLib.cargoFmt commonArgs;
-    tracing-human-layer-audit = craneLib.cargoAudit (commonArgs
+    tracing-human-layer-audit = craneLib.cargoAudit (
+      commonArgs
       // {
         inherit advisory-db;
-      });
-  };
+      }
+    );
+  }
+  // checks;
 
   devShell = craneLib.devShell {
-    inherit checks;
+    checks = checks';
 
     # Make rust-analyzer work
     RUST_SRC_PATH = rustPlatform.rustLibSrc;
@@ -72,26 +83,31 @@
       rust-analyzer
       cargo-release
     ];
+
+    inputsFrom = builtins.attrValues checks';
   };
 in
-  # Build the actual crate itself, reusing the dependency
-  # artifacts from above.
-  craneLib.buildPackage (commonArgs
-    // {
-      # Don't run tests; we'll do that in a separate derivation.
-      # This will allow people to install and depend on `tracing-human-layer`
-      # without downloading a half dozen different versions of GHC.
-      doCheck = false;
+# Build the actual crate itself, reusing the dependency
+# artifacts from above.
+craneLib.buildPackage (
+  commonArgs
+  // {
+    # Don't run tests; we'll do that in a separate derivation.
+    # This will allow people to install and depend on `tracing-human-layer`
+    # without downloading a half dozen different versions of GHC.
+    doCheck = false;
 
-      # Only build `tracing-human-layer`, not the test macros.
-      cargoBuildCommand = "cargoWithProfile build";
+    # Only build `tracing-human-layer`, not the test macros.
+    cargoBuildCommand = "cargoWithProfile build";
 
-      passthru = {
-        inherit
-          checks
-          devShell
-          commonArgs
-          craneLib
-          ;
-      };
-    })
+    passthru = {
+      inherit
+        devShell
+        commonArgs
+        craneLib
+        ;
+
+      checks = checks';
+    };
+  }
+)
