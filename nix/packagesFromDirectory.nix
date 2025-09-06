@@ -28,38 +28,41 @@
 # `pkgs.writeText "example.text" "foo"`.
 #
 # Tweaked from @Gabriella439's code.
-directory: let
-  supported = basename: type:
-    lib.hasSuffix ".nix" basename || type == "directory";
+directory:
+let
+  supported = basename: type: lib.hasSuffix ".nix" basename || type == "directory";
 
-  loop = dir: let
-    toKeyVal = basename: type: let
-      path = dir + "/${basename}";
-    in {
-      name = builtins.replaceStrings [".nix"] [""] basename;
-
-      value =
-        if type == "regular"
-        then callPackage path {}
-        else if type == "directory"
-        then let
-          default = path + "/default.nix";
+  loop =
+    dir:
+    let
+      toKeyVal =
+        basename: type:
+        let
+          path = dir + "/${basename}";
         in
-          if builtins.pathExists default
-          then callPackage default {}
-          else loop path
-        else
-          abort
-          ''
-            packagesFromDirectory: Unsupported file type
+        {
+          name = builtins.replaceStrings [ ".nix" ] [ "" ] basename;
 
-            File type: ${type}
+          value =
+            if type == "regular" then
+              callPackage path { }
+            else if type == "directory" then
+              let
+                default = path + "/default.nix";
+              in
+              if builtins.pathExists default then callPackage default { } else loop path
+            else
+              abort ''
+                packagesFromDirectory: Unsupported file type
 
-            Path: ${path}
-          '';
-    };
-  in
-    builtins.listToAttrs
-    (lib.mapAttrsToList toKeyVal (lib.filterAttrs supported (builtins.readDir dir)));
+                File type: ${type}
+
+                Path: ${path}
+              '';
+        };
+    in
+    builtins.listToAttrs (
+      lib.mapAttrsToList toKeyVal (lib.filterAttrs supported (builtins.readDir dir))
+    );
 in
-  loop (./. + "/${directory}")
+loop (./. + "/${directory}")
