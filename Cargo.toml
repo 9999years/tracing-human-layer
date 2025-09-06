@@ -6,7 +6,7 @@ resolver = "2"
 
 [package]
 name = "tracing-human-layer"
-version = "0.1.3"
+version = "0.2.0"
 description = "A human-friendly tracing console output layer"
 edition = "2021"
 license = "MIT"
