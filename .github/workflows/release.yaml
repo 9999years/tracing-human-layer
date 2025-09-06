@@ -70,6 +70,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - uses: cachix/install-nix-action@v31
+
       - name: Build documentation
         run: |
           RESULT=$(nix build --no-link --print-out-paths --print-build-logs .#docs-tarball)
@@ -82,8 +84,6 @@ jobs:
           name: documentation
           path: |
             target/*
-
-      - uses: cachix/install-nix-action@v31
 
       - name: Publish to crates.io
         env:

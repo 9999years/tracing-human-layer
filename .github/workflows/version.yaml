@@ -63,12 +63,3 @@ jobs:
             Update version to ${{ steps.new_cargo_metadata.outputs.version }} with [cargo-release](https://github.com/crate-ci/cargo-release).
             Merge this PR to build and publish a new release.
           labels: release
-
-      - name: Comment on PR with link to release PR
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            [A PR to release these changes has been created, bumping the version from ${{ steps.old_cargo_metadata.outputs.version }} to ${{ steps.new_cargo_metadata.outputs.version }}.][pr]
-
-            [pr]: ${{ steps.release_pr.outputs.pull-request-url }}
