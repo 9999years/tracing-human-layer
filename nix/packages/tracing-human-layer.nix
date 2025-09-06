@@ -12,7 +12,17 @@
   craneLib = crane.mkLib pkgs;
 
   commonArgs' = {
-    src = craneLib.cleanCargoSource (craneLib.path ../../.);
+    src =
+      let root = ../../.;
+      in lib.fileset.toSource {
+        inherit root;
+        fileset = lib.fileset.unions [
+          (craneLib.fileset.commonCargoSources root)
+            (lib.fileset.fileFilter (file: file.hasExt "md") root)
+            (root + "/README.md")
+            (root + "/screenshot.png")
+        ];
+      };
 
     nativeBuildInputs = lib.optionals stdenv.isDarwin [
       # Additional darwin specific inputs can be set here
