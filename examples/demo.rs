@@ -1,5 +1,8 @@
+use std::str::FromStr;
+
 use pico_args::Arguments;
 use supports_color::Stream;
+use tracing_human_layer::BlankLines;
 use tracing_human_layer::TextWrapOptionsOwned;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::layer::SubscriberExt;
@@ -17,6 +20,8 @@ Options:
     --stdout   Write output to stdout rather than stderr
     --no-wrap  Don't wrap text
     --width N  Wrap to N columns
+    --blank-lines CHOICE  How to wrap blank lines.
+                          One of `never`, `around-long`, or `always`.
 ";
 
 struct Args {
@@ -24,6 +29,36 @@ struct Args {
     stdout: bool,
     wrap: bool,
     width: Option<usize>,
+    blank_lines: Option<BlankLines>,
+}
+
+fn pico_error(err: String) -> pico_args::Error {
+    pico_args::Error::ArgumentParsingFailed { cause: err }
+}
+
+struct BlankLinesParsable(BlankLines);
+
+impl From<BlankLinesParsable> for BlankLines {
+    fn from(value: BlankLinesParsable) -> Self {
+        value.0
+    }
+}
+
+impl FromStr for BlankLinesParsable {
+    type Err = pico_args::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(match s {
+            "never" => BlankLines::Never,
+            "around-long" => BlankLines::AroundLong,
+            "always" => BlankLines::Always,
+            _ => {
+                return Err(pico_error(format!(
+                    "Expected one of `never`, `around-long`, `always`. Found: {s:?}"
+                )));
+            }
+        }))
+    }
 }
 
 impl Args {
@@ -35,18 +70,19 @@ impl Args {
             std::process::exit(0);
         }
 
+        let blank_lines: Option<BlankLinesParsable> = args.opt_value_from_str("--blank-lines")?;
+
         let ret = Self {
             color: args.contains("--color"),
             stdout: args.contains("--stdout"),
             wrap: !args.contains("--no-wrap"),
             width: args.opt_value_from_str("--width")?,
+            blank_lines: blank_lines.map(|blank_lines| blank_lines.into()),
         };
 
         let extra = args.finish();
         if !extra.is_empty() {
-            return Err(pico_args::Error::ArgumentParsingFailed {
-                cause: format!("Found unexpected args: {extra:?}"),
-            });
+            return Err(pico_error(format!("Found unexpected args: {extra:?}")));
         }
 
         Ok(ret)
@@ -58,7 +94,7 @@ fn main() {
 
     let registry = tracing_subscriber::registry();
 
-    let layer = HumanLayer::default()
+    let mut layer = HumanLayer::default()
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_color_output(
             args.color
@@ -79,6 +115,10 @@ fn main() {
         } else {
             None
         });
+
+    if let Some(blank_lines) = args.blank_lines {
+        layer = layer.with_blank_lines(blank_lines);
+    }
 
     if args.stdout {
         registry

@@ -6,6 +6,7 @@
 #![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 
+pub use blank_lines::BlankLines;
 pub use layer::HumanLayer;
 pub use style::LayerStyles;
 pub use style::ProvideStyle;
@@ -18,6 +19,7 @@ pub(crate) use fields::HumanFields;
 pub(crate) use span_fields::StyledSpanFields;
 pub(crate) use span_info::SpanInfo;
 
+mod blank_lines;
 mod color;
 mod event;
 mod fields;

@@ -18,6 +18,7 @@ use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::registry::Scope;
 use tracing_subscriber::Layer;
 
+use crate::BlankLines;
 use crate::HumanEvent;
 use crate::HumanFields;
 use crate::LayerStyles;
@@ -51,6 +52,8 @@ pub struct HumanLayer<W = LineWriter<Stderr>, S = LayerStyles> {
     output_writer: Mutex<W>,
     /// Styles for writing events.
     styles: S,
+    /// When to print blank lines between log messages.
+    blank_lines: BlankLines,
 }
 
 impl<W, S> Debug for HumanLayer<W, S> {
@@ -63,6 +66,7 @@ impl<W, S> Debug for HumanLayer<W, S> {
             // See: https://github.com/rust-lang/rust/issues/117729
             .field("output_writer", &std::any::type_name::<W>())
             .field("styles", &std::any::type_name::<S>())
+            .field("blank_lines", &self.blank_lines)
             .finish_non_exhaustive()
     }
 }
@@ -76,6 +80,7 @@ impl Default for HumanLayer {
             output_writer: Mutex::new(LineWriter::new(std::io::stderr())),
             styles: LayerStyles::new(),
             textwrap_options: Some(TextWrapOptionsOwned::new()),
+            blank_lines: BlankLines::AroundLong,
         }
     }
 }
@@ -102,6 +107,7 @@ impl<W, S> HumanLayer<W, S> {
             output_writer: Mutex::new(output_writer),
             styles: self.styles,
             textwrap_options: self.textwrap_options,
+            blank_lines: self.blank_lines,
         }
     }
 
@@ -140,12 +146,39 @@ impl<W, S> HumanLayer<W, S> {
             output_writer: self.output_writer,
             styles,
             textwrap_options: self.textwrap_options,
+            blank_lines: self.blank_lines,
         }
     }
 
+    /// Set when blank lines are printed between log messages. See [`BlankLines`] for more
+    /// information.
+    ///
+    /// Setting this will lose information on whether or not the last log message was "long".
+    pub fn with_blank_lines(mut self, blank_lines: BlankLines) -> Self {
+        self.blank_lines = blank_lines;
+
+        match blank_lines {
+            BlankLines::Never => {
+                self.last_event_was_long.store(false, Ordering::SeqCst);
+            }
+            BlankLines::AroundLong => {}
+            BlankLines::Always => {
+                self.last_event_was_long.store(true, Ordering::SeqCst);
+            }
+        }
+
+        self
+    }
+
     fn update_long(&self, last_event_was_long: AtomicBool) {
-        self.last_event_was_long
-            .store(last_event_was_long.load(Ordering::SeqCst), Ordering::SeqCst);
+        self.last_event_was_long.store(
+            match self.blank_lines {
+                BlankLines::Never => false,
+                BlankLines::AroundLong => last_event_was_long.load(Ordering::SeqCst),
+                BlankLines::Always => true,
+            },
+            Ordering::SeqCst,
+        );
     }
 }
 
@@ -166,6 +199,7 @@ where
             // Note: We load the value out of our `AtomicBool` and then clone it to create a _new_
             // `AtomicBool`. After writing an event, we update _our_ `AtomicBool`.
             last_event_was_long: self.last_event_was_long.load(Ordering::SeqCst).into(),
+            blank_lines: self.blank_lines,
             style: self.styles.for_metadata(metadata),
             color: self.color_output,
             spans: scope
@@ -307,6 +341,7 @@ mod tests {
                 ),
                 output_writer: "std::io::buffered::linewriter::LineWriter<std::io::stdio::Stderr>",
                 styles: "tracing_human_layer::style::LayerStyles",
+                blank_lines: AroundLong,
                 ..
             }"#]]
         .assert_eq(&format!("{:#?}", HumanLayer::new()));
