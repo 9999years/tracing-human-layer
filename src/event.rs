@@ -10,6 +10,7 @@ use tracing::field::Visit;
 
 use crate::style::IntoConditionalColor;
 use crate::textwrap::TextWrapOptionsExt;
+use crate::BlankLines;
 use crate::ShouldColor;
 use crate::SpanInfo;
 
@@ -22,6 +23,7 @@ pub(crate) struct HumanEvent<'a> {
     /// reference. We can either have a separate [`AtomicBool`] like this (no contention) or borrow the
     /// [`AtomicBool`] from the [`crate::HumanLayer`].
     pub(crate) last_event_was_long: AtomicBool,
+    pub(crate) blank_lines: BlankLines,
     pub(crate) style: Cow<'a, Style>,
     pub(crate) textwrap_options: Option<textwrap::Options<'a>>,
     pub(crate) color: ShouldColor,
@@ -92,7 +94,11 @@ impl<'a> Display for HumanEvent<'a> {
 
         // If there's more than one line of message, add a blank line before and after the message.
         // This doesn't account for fields, but I think that's fine?
-        let add_blank_lines = lines.len() > 1;
+        let add_blank_lines = match self.blank_lines {
+            BlankLines::Never => false,
+            BlankLines::AroundLong => lines.len() > 1,
+            BlankLines::Always => true,
+        };
         // Store `add_blank_lines` and fetch the previous value:
         let last_event_was_long = self
             .last_event_was_long
@@ -173,6 +179,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::INFO),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -197,6 +204,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::INFO),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -219,6 +227,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::INFO),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -247,6 +256,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::INFO),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -275,6 +285,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::WARN),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -321,6 +332,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::WARN),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -367,6 +379,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::TRACE),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -389,6 +402,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::DEBUG),
                 color: ShouldColor::Always,
                 fields: HumanFields {
@@ -411,6 +425,7 @@ mod tests {
         check(
             HumanEvent {
                 last_event_was_long: AtomicBool::new(false),
+                blank_lines: BlankLines::AroundLong,
                 style: styles.for_level(Level::WARN),
                 color: ShouldColor::Always,
                 fields: HumanFields {
